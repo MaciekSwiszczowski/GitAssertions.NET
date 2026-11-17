@@ -1,0 +1,128 @@
+<Project>
+  <!--
+    Three configurations, and the difference between them is the point:
+
+      Debug             as fast as possible. No analyzers, no NuGet audit. This is what you build while working.
+      Debug_Analyzers   the full analyzer set, warnings as errors. A task is not done until this builds clean.
+      Release           optimised output. Audit on, analyzers off.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Configurations>Debug;Debug_Analyzers;Release</Configurations>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnableNETAnalyzers>false</EnableNETAnalyzers>
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <DebugType>portable</DebugType>
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
+  </PropertyGroup>
+
+  <!--
+    The analyzer packages below are referenced only under Debug_Analyzers, but project.assets.json is written once
+    per restore and is not per-configuration. Building Debug straight after Debug_Analyzers without a restore -
+    which is what an IDE does when it thinks packages are current - would therefore load those analyzers into the
+    Debug build, where TreatWarningsAsErrors turns every hit into an error. Skipping analyzer execution outside
+    Debug_Analyzers makes that leak harmless. Source generators are unaffected: this stops diagnostic analyzers
+    only.
+  -->
+  <PropertyGroup Condition="'$(Configuration)' != 'Debug_Analyzers'">
+    <RunAnalyzers>false</RunAnalyzers>
+  </PropertyGroup>
+
+  <!-- Auditing is reserved for Release and Debug_Analyzers, to keep the Debug restore fast. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <NuGetAudit>false</NuGetAudit>
+  </PropertyGroup>
+
+  <!--
+    The test tier is partly exempt. The full CA / Meziantou / Roslynator ruleset stays off on test code: it is
+    mostly false positives there (CA1707 alone fires on every underscored test method name). Off for the same
+    reason are the two VS-Threading rules written for library code - VSTHRD111 (ConfigureAwait everywhere) and
+    VSTHRD200 (Async suffix).
+
+    What stays on, escalated to errors, is the set that catches a real bug in a fixture: nullable, CS1998 / CS4014,
+    AsyncFixer, async void (VSTHRD100), unobserved async results (VSTHRD110), IDE0005 for unused usings and
+    IDE2000 for stray blank lines.
+
+    The IDisposable analyzers are deliberately absent from the test tier: on test code they are mostly false
+    positives - a fixture built one helper call away, a disposable owned by a using in the caller.
+  -->
+  <PropertyGroup Condition="'$(MSBuildProjectName)' != ''">
+    <IsTestTierProject Condition="$([System.String]::Copy('$(MSBuildProjectName)').EndsWith('.Tests'))">true</IsTestTierProject>
+  </PropertyGroup>
+
+  <!--
+    IDE0005 (unused using) needs GenerateDocumentationFile, which is off for the library, so it is suppressed
+    there. The test tier turns the documentation file on and escalates IDE0005 to an error below, so the
+    suppression must not reach it - NoWarn beats WarningsAsErrors, and a rule named in both is silently off.
+  -->
+  <PropertyGroup Condition="'$(IsTestTierProject)' != 'true'">
+    <NoWarn>$(NoWarn);IDE0005</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug_Analyzers'">
+    <DebugSymbols>true</DebugSymbols>
+    <Optimize>false</Optimize>
+    <DefineConstants>$(DefineConstants);DEBUG;TRACE;DEBUG_ANALYZERS</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug_Analyzers' and '$(IsTestTierProject)' == 'true'">
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- CS1591: a public test method per xUnit convention has no doc comment and never will. -->
+    <NoWarn>$(NoWarn);CS1591;VSTHRD111;VSTHRD200</NoWarn>
+    <WarningsAsErrors>
+      nullable;CS1998;CS4014;
+      AsyncFixer01;AsyncFixer02;
+      VSTHRD100;VSTHRD110;
+      IDE0005;IDE2000
+    </WarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(Configuration)' == 'Debug_Analyzers' and '$(IsTestTierProject)' == 'true'">
+    <PackageReference Include="Microsoft.VisualStudio.Threading.Analyzers" PrivateAssets="all" />
+    <PackageReference Include="AsyncFixer" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!--
+    The library is consumed by other people's test projects, which may run under a SynchronizationContext, so
+    ConfigureAwait (CA2007) stays on here, unlike in a console app.
+  -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug_Analyzers' and '$(IsTestTierProject)' != 'true'">
+    <AnalysisMode>Recommended</AnalysisMode>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <WarningsAsErrors>
+      CA2007;CA2012;CA2016;CA1849;
+      VSTHRD100;VSTHRD103;VSTHRD110;VSTHRD200;
+      MA0040;MA0041;MA0134;
+      AF0001;AF0004;
+      CS1998;
+      IDISP001;IDISP003;IDISP004;IDISP007
+    </WarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(Configuration)' == 'Debug_Analyzers' and '$(IsTestTierProject)' != 'true'">
+    <PackageReference Include="Meziantou.Analyzer" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.VisualStudio.Threading.Analyzers" PrivateAssets="all" />
+    <PackageReference Include="ErrorProne.NET.CoreAnalyzers" PrivateAssets="all" />
+    <PackageReference Include="Roslynator.Analyzers" PrivateAssets="all" />
+    <PackageReference Include="IDisposableAnalyzers" PrivateAssets="all" />
+    <PackageReference Include="AsyncFixer" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!--
+    xUnit v3 test projects are self-hosting Microsoft.Testing.Platform executables, not VSTest libraries, so they
+    must produce an apphost. `dotnet test` is routed through MTP by the "test.runner" entry in global.json.
+  -->
+  <PropertyGroup Condition="'$(IsTestTierProject)' == 'true'">
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+</Project>

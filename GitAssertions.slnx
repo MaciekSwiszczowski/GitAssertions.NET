@@ -1,0 +1,13 @@
+<Solution>
+  <Configurations>
+    <BuildType Name="Debug" />
+    <BuildType Name="Debug_Analyzers" />
+    <BuildType Name="Release" />
+  </Configurations>
+  <Folder Name="/src/">
+    <Project Path="src/GitAssertions/GitAssertions.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/GitAssertions.Tests/GitAssertions.Tests.csproj" />
+  </Folder>
+</Solution>
