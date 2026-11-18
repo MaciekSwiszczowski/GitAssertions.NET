@@ -4,7 +4,7 @@
 
 GitAssertions.NET (namespace GitAssertions) is a small .NET library for writing Git state tests (architecture-style unit tests) that fail when an AI agent finishes a task and leaves the repository in a broken or messy state. A failing test tells the agent exactly what's wrong, so it can clean up the Git state itself before it finishes.
 
-The library is **read-only**. It inspects the repository and reports what it finds; it never stages, commits, deletes, resets, or changes any file, ref, or setting. Each failure message ends with a ready-to-run `Fix:` command built from the actual offending paths, so a person can paste it into a terminal and an agent can run it. Running that command is always the caller's decision.
+The library is **read-only**. It inspects the repository and reports what it finds; it never stages, commits, deletes, resets, or changes any file, ref, or setting. A failure message gives a `Fix:` command built from the actual offending paths, ready to paste into a terminal. A path that isn't shell-safe is left out of the command, and when no listed path is shell-safe the command is left out and the message says to handle the paths by hand (see [Shell-safe paths](#shell-safe-paths)). Fix commands are suggestions: read them before running them. Running one is always the caller's decision (see [Security](#security)).
 
 ## Scope
 
@@ -122,10 +122,11 @@ Or <alternative description>:
 
 - **First line:** the rule name, a colon, and a one-sentence summary with the count, e.g. `NoUnstagedChanges: 2 files have unstaged changes.` Use the singular form for one item (`1 file has`).
 - **Entries:** one per line, indented two spaces. Paths are relative to the repository root, use `/` separators, and are sorted ordinally. Where a check reports a kind of change, the entry is `<kind>: <path>`.
-- **Limit:** at most 20 entries. When there are more, the 21st line is `  ...and <n> more. Run the check again after fixing these.` `CheckResult.Files` still holds every offending path.
+- **Limit:** at most 20 entries. When there are more, the 21st line is `  ...and <n> more. Run the check again after fixing these.` `CheckResult.Files` still holds every offending path. Path length and total message size are capped too (see [Output limits](#output-limits)).
 - **`Fix:`** one command line, indented two spaces, that fixes exactly the listed entries when run from the repository root. Paths are separated from options with `--`.
 - **`Or ...:`** zero or more alternatives, each with its own command line, or a plain sentence when there is no single command (e.g. editing .gitignore).
-- **Quoting:** a path is wrapped in double quotes when it contains anything other than letters, digits, `.`, `_`, `-`, and `/`, e.g. `"docs/my notes.md"`. This works the same in bash, PowerShell, and cmd. Paths that contain `"`, `$`, or a backtick are out of scope for v1.
+- **Quoting:** a path goes into a command only if it is *shell-safe* (see [Shell-safe paths](#shell-safe-paths)). A shell-safe path is wrapped in double quotes when it contains anything other than letters, digits, `.`, `_`, `-`, and `/`, e.g. `"docs/my notes.md"`. Inside double quotes, the allowed characters are literal in bash, PowerShell, and cmd.
+- **Unsafe paths:** a path that isn't shell-safe is still listed as an entry, in escaped form, but is left out of every command. After the commands, the message adds `Not included in the commands above because the path contains characters that are unsafe in a shell; handle it by hand:` followed by each such path, escaped and indented two spaces. If no listed path is shell-safe, the command lines are omitted and only this note is printed.
 - **Line endings:** `\n` between lines, no trailing newline.
 - **Healthy result:** `Message` is `<Rule>: OK.` and `Files` is empty.
 
@@ -305,12 +306,68 @@ Or discard the changes:
 
 Phase-two checks will follow the same common format when they are added.
 
+## Security
+
+The library is read-only and runs in-process, so its attack surface is small. These rules cover what remains.
+
+### Shell-safe paths
+
+File names come from the repository, which may be hostile (for example, a repo an agent cloned). A person or an agent may paste a `Fix:` command straight into a shell, so a crafted name such as `$(rm -rf ~).txt`, or one that contains a newline, must never be able to inject a command.
+
+- A path is **shell-safe** when every character is a Unicode letter or digit, a space, or one of `. _ - / + , = @`, and it does not start with `:` (git pathspec magic). Anything else makes the path unsafe, including `$`, backtick, `"`, `'`, `%`, `!`, `^`, `&`, `|`, `;`, `<`, `>`, `(`, `)`, `*`, `?`, `[`, `]`, `{`, `}`, `#`, `~`, and every control or format character (Unicode categories Cc and Cf, which include newline, tab, ESC, and bidirectional overrides).
+- Only shell-safe paths appear in commands (see [Common format](#common-format)). Unsafe paths are never quoted or escaped into a command, because no single escaping is correct for bash, PowerShell, and cmd at once.
+- **Escaped display:** wherever a path is printed outside a command (entries and the unsafe-path note), control and format characters are replaced with escapes: `\n`, `\r`, `\t`, and `\u{XXXX}` for the rest (hex code point). A literal backslash is printed as `\\`. This keeps one path on one line and stops terminal escape sequences from reaching logs.
+- The rest of each message is fixed text from the templates, so paths are the only untrusted input.
+
+Example with one safe and one unsafe untracked file (the second name contains `$(...)` and a newline):
+
+```text
+NoUntrackedFiles: 2 untracked files found.
+  $(rm -rf ~)\n.txt
+  tmp/notes.txt
+Fix:
+  git add -- tmp/notes.txt
+Or delete them:
+  git clean -f -- tmp/notes.txt
+Or ignore them: add the paths to .gitignore.
+Not included in the commands above because the path contains characters that are unsafe in a shell; handle it by hand:
+  $(rm -rf ~)\n.txt
+```
+
+### Output limits
+
+- At most 20 entries per check (see [Common format](#common-format)).
+- A path longer than 200 characters is shortened in entries to its first 100 and last 60 characters joined by `...`, and it is treated as unsafe, so it never appears in a command.
+- A single check's `Message` is at most 16,000 characters. If a message would exceed that (which the other limits should prevent), it is cut at the last full line that fits and ends with `  ...message truncated.` A `RunAll` message is therefore at most six check messages plus its header.
+- `CheckResult.Files` is not truncated; it holds the raw paths for programmatic use.
+
+### Untrusted repositories and libgit2
+
+- The library never executes anything a repository asks for: no hooks, no filter drivers (clean/smudge/process commands from `.gitattributes` and config), no fsmonitor, and no other external commands. LibGit2Sharp does not run hooks or external filter drivers, and the library registers no filters of its own.
+- The library does not change libgit2's global settings. In particular, it leaves repository owner validation (`safe.directory`) switched on.
+- Opening a hostile repository still runs native libgit2 parsing code. Keep LibGit2Sharp on its latest release and watch libgit2 security advisories.
+
+### Information in messages
+
+Messages usually end up in test output and CI logs, so they reveal file names, which may include sensitive ones such as `.env` or `secrets.json`. They never include file contents. This is accepted by design; callers who publish CI logs should keep that in mind.
+
+### Test cleanup
+
+`TempRepo` keeps its repository in a `TemporaryDirectory` (Meziantou.Framework.TemporaryDirectory), a uniquely named folder under the system temp directory that is deleted on dispose. Its delete clears read-only flags (libgit2 writes read-only files under `.git/objects`), retries a locked file, and removes a junction or symlink as a link without following it, so nothing outside the folder is touched. `TempRepo` releases the repository handle before the folder is deleted.
+
+### Supply chain (phase two)
+
+- Pin package versions (central package management with lock files) and keep GitHub Actions pinned to commit SHAs.
+- Enable Dependabot for NuGet packages and GitHub Actions.
+- CI workflows run with read-only token permissions (`permissions: contents: read`).
+- When publishing to NuGet: sign the package and enable SourceLink.
+
 ## Implementation notes and catches
 
 - Always dispose `Repository` (wrap it in `using`). Leaked handles can lock files in .git on Windows.
 - Make sure the right native libgit2 binary is copied to the output on every build agent and platform.
 - Status can differ a little from `git status` because of autocrlf / line endings, file mode, and some gitignore edge cases. Turn on `RecurseUntrackedDirs` and keep `IncludeIgnored` off when checking untracked files.
-- LibGit2Sharp is maintained but releases slowly.
+- LibGit2Sharp is maintained but releases slowly. Check its libgit2 version against security advisories when upgrading.
 
 ## Open items
 

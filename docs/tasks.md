@@ -21,13 +21,22 @@ Version 1 is a two-day build done with agents: an empty GitHub repo with CI, the
 
 ## Phase 1: Test infrastructure
 
-- [ ] **T1.1 TempRepo fixture.** Test helper that creates a temp folder, runs `Repository.Init`, makes an initial commit, and deletes everything on dispose. Tests first: the folder exists during the test and is gone afterward.
-- [ ] **T1.2 Scenario helpers.** Fluent helpers on TempRepo: AddFile, Stage, Commit, Delete, CreateBranch, Checkout, AddGitIgnore. Tests first: each helper produces the expected `RetrieveStatus` result. (Helpers for merge, rebase, cherry-pick, and revert are added with the check that needs them, T3.4 and T3.5.)
+- [x] **T1.1 TempRepo fixture.** Test helper that creates a temp folder, runs `Repository.Init`, makes an initial commit, and deletes everything on dispose. Tests first: the folder exists during the test and is gone afterward.
+- [x] **T1.2 Scenario helpers.** Fluent helpers on TempRepo: AddFile, Stage, Commit, Delete, CreateBranch, Checkout, AddGitIgnore. Tests first: each helper produces the expected `RetrieveStatus` result. (Helpers for merge, rebase, cherry-pick, and revert are added with the check that needs them, T3.4 and T3.5.)
 
 ## Phase 2: Core API
 
 - [ ] **T2.1 GitAssert.Open and Dispose.** Opens a repo path, implements IDisposable, and throws a clear error for a path that isn't a repo. Tests first: open works, a bad path throws, and the folder can be deleted after dispose.
 - [ ] **T2.2 CheckResult.** `Rule`, `IsHealthy`, `Message`, `Files`, and a factory for healthy and failing results. Tests first: the message follows the spec's common format (rule line, entries, 20-entry limit, quoting, `Fix:` command); a healthy result is `<Rule>: OK.` with no files.
+- [ ] **T2.3 Shell-safe paths and output limits.** Message formatting follows the spec's Security > Shell-safe paths and Output limits. Tests first:
+  - A path with `$(...)`, a backtick, `;`, `&`, `|`, `%`, `"`, `'`, `*`, or a leading `:` is listed as an entry but left out of every command, and appears in the unsafe-path note.
+  - Newline, tab, carriage return, ESC, and a bidirectional override in a path are printed escaped (`\n`, `\t`, `\r`, `\u{001B}`, `\u{202E}`), so each entry stays on one line; a literal backslash prints as `\\`.
+  - When no listed path is safe, the message has no command lines, only the note.
+  - A path with a space or a non-ASCII letter is double-quoted in commands; a plain path is not quoted.
+  - A 300-character path is shortened in entries (first 100 + `...` + last 60) and left out of commands.
+  - A message that would exceed 16,000 characters is cut at a full line and ends with `  ...message truncated.`
+  - `Files` still holds the raw, untruncated paths.
+- [ ] **T2.4 Hostile-repo safety.** Prove the library never runs anything the repository asks for. Tests first: in a TempRepo with an executable `pre-commit` and `post-checkout` hook and a `.gitattributes` filter driver whose clean/smudge/process commands would create a marker file, opening the repo and running every v1 check never creates the marker. Also assert the library leaves libgit2 owner validation switched on. Add the "never runs hooks, filters, or fsmonitor" statement to the README.
 
 ## Phase 3: Version 1 checks (one task each, any order after Phase 2)
 
@@ -53,5 +62,8 @@ Each task: write the spec's v1 test scenarios as failing tests (skip the ones ma
 - [ ] NoStaleIndexLock check.
 - [ ] Options: `RunAll(options)` with per-check on/off, allow-lists, expected branch. Includes the spec's deferred scenarios: allow-listed path passes, disabled checks are skipped.
 - [ ] CliWrap git runner and real-Git integration tests (autocrlf, `git add -f`, files committed before an ignore rule, merge or rebase in progress, index.lock).
-- [ ] NuGet packaging with SourceLink, plus a usage sample.
+- [ ] NuGet packaging with SourceLink and package signing, plus a usage sample.
+- [ ] Supply chain: package lock files (`RestorePackagesWithLockFile`, locked restore in CI) on top of central package versions, and GitHub Actions pinned to commit SHAs. Proof: CI restores in locked mode and the workflow uses SHA-pinned actions.
+- [ ] Dependabot for NuGet and GitHub Actions, so LibGit2Sharp (libgit2) security updates arrive as PRs. Proof: `.github/dependabot.yml` exists and Dependabot opens its first update check.
+- [x] CI read-only token: set `permissions: contents: read` in every workflow. Proof: a green CI run with the restricted permissions. (Already in the CI workflow from T0.3; keep it in any new workflow.)
 - [ ] Review real repos for new scenarios and add them as new tasks.

@@ -6,11 +6,17 @@
     Take the latest version when you add a package (`dotnet add package <name>` resolves and records it) rather
     than copying a number from another repository.
   -->
+  <ItemGroup Label="Git">
+    <!-- The library's only runtime dependency (from T2.1); the tests also use it directly to set up scenarios. -->
+    <PackageVersion Include="LibGit2Sharp" Version="0.32.0" />
+  </ItemGroup>
   <ItemGroup Label="Test">
     <PackageVersion Include="xunit.v3" Version="4.0.3" />
     <!-- Kept beside Microsoft.Testing.Platform for IDE test discovery. -->
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
+    <!-- A disposable temp folder whose delete handles read-only files and links; used by the TempRepo test fixture. -->
+    <PackageVersion Include="Meziantou.Framework.TemporaryDirectory" Version="3.0.17" />
   </ItemGroup>
   <!--
     Referenced only under the Debug_Analyzers configuration - see Directory.Build.props. Debug stays fast and
