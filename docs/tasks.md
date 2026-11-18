@@ -27,12 +27,11 @@ Version 1 is a two-day build done with agents: an empty GitHub repo with CI, the
 ## Phase 2: Core API
 
 - [x] **T2.1 GitAssert.Open.** Checks that a path is a repository root and keeps the path. `GitAssert` holds no `Repository` handle: every read opens the repository and disposes it before returning, so an instance has nothing to dispose and may be stored and shared. Throws a clear error for a path that isn't a repo. Tests first: open reads the right repository, a bad path throws, and one instance shared by parallel readers works.
-- [ ] **T2.2 CheckResult.** `Rule`, `IsHealthy`, `Message`, `Files`, and a factory for healthy and failing results. Tests first: the message follows the spec's common format (rule line, entries, 20-entry limit, quoting, `Fix:` command); a healthy result is `<Rule>: OK.` with no files.
+- [x] **T2.2 CheckResult.** `Rule`, `IsHealthy`, `Message`, `Files`, and a factory for healthy and failing results. Tests first, for the rules every check's message shares: the rule line, entries sorted ordinally, the 20-entry limit, `--` before the paths, `\n` between lines; a path with a space, a non-ASCII letter, or `+ , = @` is double-quoted in commands and a plain path is not; `Files` is sorted, read-only, and keeps every path; a healthy result is `<Rule>: OK.` with no files. What only some checks print (kinds of change, renames, commands without paths, sentence-only fix lines, a failure with no entries) is tested in Phase 3 by the checks that print it, against the spec's example messages.
 - [ ] **T2.3 Shell-safe paths and output limits.** Message formatting follows the spec's Security > Shell-safe paths and Output limits. Tests first:
   - A path with `$(...)`, a backtick, `;`, `&`, `|`, `%`, `"`, `'`, `*`, or a leading `:` is listed as an entry but left out of every command, and appears in the unsafe-path note.
   - Newline, tab, carriage return, ESC, and a bidirectional override in a path are printed escaped (`\n`, `\t`, `\r`, `\u{001B}`, `\u{202E}`), so each entry stays on one line; a literal backslash prints as `\\`.
   - When no listed path is safe, the message has no command lines, only the note.
-  - A path with a space or a non-ASCII letter is double-quoted in commands; a plain path is not quoted.
   - A 300-character path is shortened in entries (first 100 + `...` + last 60) and left out of commands.
   - A message that would exceed 16,000 characters is cut at a full line and ends with `  ...message truncated.`
   - `Files` still holds the raw, untruncated paths.

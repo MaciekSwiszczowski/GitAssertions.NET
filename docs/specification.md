@@ -35,7 +35,7 @@ Test scenarios that depend on a phase-two feature (allow-listed paths, disabled 
 ## Public API (sketch)
 
 - `GitAssert.Open(string repoPath)` checks that the path is a repository root and returns a `GitAssert` that keeps the path. It holds no `Repository` handle: each check opens the repository, reads it, and disposes it before returning (`RunAll` opens it once for all checks). So `GitAssert` is not disposable, an instance may be stored and shared between tests running in parallel, and the repository folder can be deleted as soon as a check returns.
-- Each check returns a `CheckResult` with `Rule` (the check's name, e.g. `NoUntrackedFiles`), `IsHealthy`, a short `Message`, and the list of `Files`. A healthy result has an empty `Files` list.
+- Each check returns a `CheckResult` with `Rule` (the check's name, e.g. `NoUntrackedFiles`), `IsHealthy`, a short `Message`, and the list of `Files`. `Files` holds every offending path, sorted ordinally and never truncated; a healthy result has an empty `Files` list.
 - Works with any test framework, e.g.
 
   ```csharp
@@ -121,11 +121,11 @@ Or <alternative description>:
 ```
 
 - **First line:** the rule name, a colon, and a one-sentence summary with the count, e.g. `NoUnstagedChanges: 2 files have unstaged changes.` Use the singular form for one item (`1 file has`).
-- **Entries:** one per line, indented two spaces. Paths are relative to the repository root, use `/` separators, and are sorted ordinally. Where a check reports a kind of change, the entry is `<kind>: <path>`.
+- **Entries:** one per line, indented two spaces. Paths are relative to the repository root and use `/` separators. Where a check reports a kind of change, the entry is `<kind>: <path>`. Entries are sorted ordinally by their whole line, so the entries of one kind stay together (`new: src/Feature.cs` comes before `renamed: a.txt -> b.txt`), and commands list the paths in entry order.
 - **Limit:** at most 20 entries. When there are more, the 21st line is `  ...and <n> more. Run the check again after fixing these.` `CheckResult.Files` still holds every offending path. Path length and total message size are capped too (see [Output limits](#output-limits)).
 - **`Fix:`** one command line, indented two spaces, that fixes exactly the listed entries when run from the repository root. Paths are separated from options with `--`.
 - **`Or ...:`** zero or more alternatives, each with its own command line, or a plain sentence when there is no single command (e.g. editing .gitignore).
-- **Quoting:** a path goes into a command only if it is *shell-safe* (see [Shell-safe paths](#shell-safe-paths)). A shell-safe path is wrapped in double quotes when it contains anything other than letters, digits, `.`, `_`, `-`, and `/`, e.g. `"docs/my notes.md"`. Inside double quotes, the allowed characters are literal in bash, PowerShell, and cmd.
+- **Quoting:** a path goes into a command only if it is *shell-safe* (see [Shell-safe paths](#shell-safe-paths)). A shell-safe path is wrapped in double quotes when it contains anything other than ASCII letters and digits, `.`, `_`, `-`, and `/`, e.g. `"docs/my notes.md"` or `"docs/café.md"`. Inside double quotes, the allowed characters are literal in bash, PowerShell, and cmd.
 - **Unsafe paths:** a path that isn't shell-safe is still listed as an entry, in escaped form, but is left out of every command. After the commands, the message adds `Not included in the commands above because the path contains characters that are unsafe in a shell; handle it by hand:` followed by each such path, escaped and indented two spaces. If no listed path is shell-safe, the command lines are omitted and only this note is printed.
 - **Line endings:** `\n` between lines, no trailing newline.
 - **Healthy result:** `Message` is `<Rule>: OK.` and `Files` is empty.
