@@ -4,4 +4,13 @@
     <RootNamespace>GitAssertions</RootNamespace>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="LibGit2Sharp" />
+  </ItemGroup>
+
+  <!-- The tests read the opened Repository directly: internal plus InternalsVisibleTo is the seam, not reflection. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="GitAssertions.Tests" />
+  </ItemGroup>
+
 </Project>

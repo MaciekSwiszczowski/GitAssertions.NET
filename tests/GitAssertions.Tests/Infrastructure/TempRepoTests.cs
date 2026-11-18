@@ -60,8 +60,8 @@ public sealed class TempRepoTests
         using TempRepo repo = TempRepo.Create();
 
         // Assert
-        repo.Repo.Commits.Select(commit => commit.MessageShort).ShouldBe(["Initial commit"]);
-        repo.Repo.Head.Tip.Tree.Select(entry => entry.Path).ShouldBe(["readme.txt"]);
+        repo.Repo.Commits.Select(static commit => commit.MessageShort).ShouldBe(["Initial commit"]);
+        repo.Repo.Head.Tip.Tree.Select(static entry => entry.Path).ShouldBe(["readme.txt"]);
         repo.Repo.Head.FriendlyName.ShouldBe("main");
     }
 
@@ -75,7 +75,7 @@ public sealed class TempRepoTests
         using TempRepo repo = TempRepo.Create();
 
         // Assert
-        repo.Repo.RetrieveStatus().Select(entry => entry.FilePath).ShouldBeEmpty();
+        repo.Repo.RetrieveStatus().Select(static entry => entry.FilePath).ShouldBeEmpty();
     }
 
     // Trigger: A test author creates a TempRepo on a machine with its own Git config, such as core.autocrlf.
@@ -88,7 +88,7 @@ public sealed class TempRepoTests
         using TempRepo repo = TempRepo.Create();
 
         // Assert
-        repo.Repo.Config.Select(entry => entry.Level).Distinct().ShouldBe([ConfigurationLevel.Local]);
+        repo.Repo.Config.Select(static entry => entry.Level).Distinct().ShouldBe([ConfigurationLevel.Local]);
     }
 
     // Trigger: A test author's test ends and its TempRepo is disposed.

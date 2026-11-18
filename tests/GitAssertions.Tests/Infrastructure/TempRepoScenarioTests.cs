@@ -93,9 +93,9 @@ public sealed class TempRepoScenarioTests
         repo.Commit("Add new.txt");
 
         // Assert
-        repo.Repo.Commits.Select(commit => commit.MessageShort).ShouldBe(["Add new.txt", "Initial commit"]);
+        repo.Repo.Commits.Select(static commit => commit.MessageShort).ShouldBe(["Add new.txt", "Initial commit"]);
         repo.Repo.RetrieveStatus("new.txt").ShouldBe(FileStatus.Unaltered);
-        repo.Repo.RetrieveStatus().Select(entry => entry.FilePath).ShouldBeEmpty();
+        repo.Repo.RetrieveStatus().Select(static entry => entry.FilePath).ShouldBeEmpty();
     }
 
     // Trigger: A test author makes a second commit, on a machine in any month of any year.
@@ -119,8 +119,8 @@ public sealed class TempRepoScenarioTests
             new(2020, 1, 1, 0, 1, 0, TimeSpan.Zero),
             new(2020, 1, 1, 0, 0, 0, TimeSpan.Zero),
         ];
-        repo.Repo.Commits.Select(commit => commit.Author.When).ShouldBe(newestFirst);
-        repo.Repo.Commits.Select(commit => commit.Committer.When).ShouldBe(newestFirst);
+        repo.Repo.Commits.Select(static commit => commit.Author.When).ShouldBe(newestFirst);
+        repo.Repo.Commits.Select(static commit => commit.Committer.When).ShouldBe(newestFirst);
     }
 
     // Trigger: A test author deletes a tracked file from the working tree and does nothing else.
@@ -156,7 +156,7 @@ public sealed class TempRepoScenarioTests
         // Assert
         repo.Repo.Branches["feature"].Tip.Sha.ShouldBe(initialSha);
         repo.Repo.Head.FriendlyName.ShouldBe(TempRepo.MainBranch);
-        repo.Repo.RetrieveStatus().Select(entry => entry.FilePath).ShouldBeEmpty();
+        repo.Repo.RetrieveStatus().Select(static entry => entry.FilePath).ShouldBeEmpty();
     }
 
     // Trigger: A test author creates a branch and checks it out.
@@ -174,7 +174,7 @@ public sealed class TempRepoScenarioTests
 
         // Assert
         repo.Repo.Head.FriendlyName.ShouldBe("feature");
-        repo.Repo.RetrieveStatus().Select(entry => entry.FilePath).ShouldBeEmpty();
+        repo.Repo.RetrieveStatus().Select(static entry => entry.FilePath).ShouldBeEmpty();
     }
 
     // Trigger: A test author commits a file on a feature branch and checks the initial branch out again.
@@ -198,7 +198,7 @@ public sealed class TempRepoScenarioTests
         repo.Repo.Head.FriendlyName.ShouldBe(TempRepo.MainBranch);
         File.Exists(Path.Combine(repo.Root, "feature.txt")).ShouldBeFalse();
         repo.Repo.RetrieveStatus("feature.txt").ShouldBe(FileStatus.Nonexistent);
-        repo.Repo.RetrieveStatus().Select(entry => entry.FilePath).ShouldBeEmpty();
+        repo.Repo.RetrieveStatus().Select(static entry => entry.FilePath).ShouldBeEmpty();
     }
 
     // Trigger: A test author adds an ignore rule for log files and then adds a log file.

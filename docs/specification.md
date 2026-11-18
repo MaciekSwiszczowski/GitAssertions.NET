@@ -34,12 +34,12 @@ Test scenarios that depend on a phase-two feature (allow-listed paths, disabled 
 
 ## Public API (sketch)
 
-- `GitAssert.Open(string repoPath)` returns a disposable `GitAssert` instance that wraps `Repository`.
+- `GitAssert.Open(string repoPath)` checks that the path is a repository root and returns a `GitAssert` that keeps the path. It holds no `Repository` handle: each check opens the repository, reads it, and disposes it before returning (`RunAll` opens it once for all checks). So `GitAssert` is not disposable, an instance may be stored and shared between tests running in parallel, and the repository folder can be deleted as soon as a check returns.
 - Each check returns a `CheckResult` with `Rule` (the check's name, e.g. `NoUntrackedFiles`), `IsHealthy`, a short `Message`, and the list of `Files`. A healthy result has an empty `Files` list.
 - Works with any test framework, e.g.
 
   ```csharp
-  using var git = GitAssert.Open(repoPath);
+  var git = GitAssert.Open(repoPath);
   var result = git.NoUntrackedFiles();
   Assert.True(result.IsHealthy, result.Message);
   ```
@@ -88,7 +88,7 @@ Each check's "Fix" below is the suggestion printed in its failure message, not s
     - Fix: `git rm --cached <file>` (the file stays on disk), then commit.
     - Tests: tracked file not ignored passes; file committed before the ignore rule was added fails; file force-added with `git add -f` fails; bin/ and obj/ folder content fails and is grouped by folder; negated rule (`!keep.txt`) passes.
 
-Cross-cutting tests: `RunAll` reports every failing check at once (two broken rules give two `Failures` and two message blocks in `Message`); a clean repo makes `RunAll` healthy; disabled checks are skipped *(phase two)*; the repo handle is released after dispose (the temp folder can be deleted on Windows); a path that isn't a repository throws a clear error.
+Cross-cutting tests: `RunAll` reports every failing check at once (two broken rules give two `Failures` and two message blocks in `Message`); a clean repo makes `RunAll` healthy; disabled checks are skipped *(phase two)*; no repo handle outlives a check (the temp folder can be deleted on Windows right after a check, with nothing disposed); a path that isn't a repository throws a clear error.
 
 ## Test tooling
 
@@ -364,7 +364,7 @@ Messages usually end up in test output and CI logs, so they reveal file names, w
 
 ## Implementation notes and catches
 
-- Always dispose `Repository` (wrap it in `using`). Leaked handles can lock files in .git on Windows.
+- Always dispose `Repository` (wrap it in `using`). Leaked handles can lock files in .git on Windows. `GitAssert` opens one per check and disposes it before returning; it never keeps one in a field, because a shared handle disposed on one thread while another reads it is a native access violation that ends the test run.
 - Make sure the right native libgit2 binary is copied to the output on every build agent and platform.
 - Status can differ a little from `git status` because of autocrlf / line endings, file mode, and some gitignore edge cases. Turn on `RecurseUntrackedDirs` and keep `IncludeIgnored` off when checking untracked files.
 - LibGit2Sharp is maintained but releases slowly. Check its libgit2 version against security advisories when upgrading.

@@ -26,7 +26,7 @@ Version 1 is a two-day build done with agents: an empty GitHub repo with CI, the
 
 ## Phase 2: Core API
 
-- [ ] **T2.1 GitAssert.Open and Dispose.** Opens a repo path, implements IDisposable, and throws a clear error for a path that isn't a repo. Tests first: open works, a bad path throws, and the folder can be deleted after dispose.
+- [x] **T2.1 GitAssert.Open.** Checks that a path is a repository root and keeps the path. `GitAssert` holds no `Repository` handle: every read opens the repository and disposes it before returning, so an instance has nothing to dispose and may be stored and shared. Throws a clear error for a path that isn't a repo. Tests first: open reads the right repository, a bad path throws, and one instance shared by parallel readers works.
 - [ ] **T2.2 CheckResult.** `Rule`, `IsHealthy`, `Message`, `Files`, and a factory for healthy and failing results. Tests first: the message follows the spec's common format (rule line, entries, 20-entry limit, quoting, `Fix:` command); a healthy result is `<Rule>: OK.` with no files.
 - [ ] **T2.3 Shell-safe paths and output limits.** Message formatting follows the spec's Security > Shell-safe paths and Output limits. Tests first:
   - A path with `$(...)`, a backtick, `;`, `&`, `|`, `%`, `"`, `'`, `*`, or a leading `:` is listed as an entry but left out of every command, and appears in the unsafe-path note.
@@ -37,6 +37,7 @@ Version 1 is a two-day build done with agents: an empty GitHub repo with CI, the
   - A message that would exceed 16,000 characters is cut at a full line and ends with `  ...message truncated.`
   - `Files` still holds the raw, untruncated paths.
 - [ ] **T2.4 Hostile-repo safety.** Prove the library never runs anything the repository asks for. Tests first: in a TempRepo with an executable `pre-commit` and `post-checkout` hook and a `.gitattributes` filter driver whose clean/smudge/process commands would create a marker file, opening the repo and running every v1 check never creates the marker. Also assert the library leaves libgit2 owner validation switched on. Add the "never runs hooks, filters, or fsmonitor" statement to the README.
+- [ ] **T2.5 Packfiles.** Independent of Phase 3: the checks may start before it. Research first: how Git stores objects in packfiles (`.git/objects/pack`), which every cloned repository uses, and how libgit2 reads them. Background, measured on 2026-11-18: libgit2 keeps a packfile open once it has read from it, and Windows then refuses to delete it; loose objects are never held open, so a fresh TempRepo cannot show a leaked handle, and no test today proves that a read releases its handle (a `Repository` kept in a field passes them all). Then, tests first: a TempRepo helper that packs the repository's objects, and a test that on a packed repository the folder can be deleted right after a `GitAssert` read, with nothing disposed. A `Repository` kept in a field must turn that test red.
 
 ## Phase 3: Version 1 checks (one task each, any order after Phase 2)
 

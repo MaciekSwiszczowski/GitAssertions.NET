@@ -48,20 +48,35 @@ internal sealed class TempRepo : IDisposable
 
     public Repository Repo { get; }
 
+    /// <summary>
+    /// Creates the folder, the repository and its initial commit. If a step throws, whatever was already made is
+    /// released and deleted before the exception goes on, so a failed setup leaves nothing under the temp path.
+    /// </summary>
     public static TempRepo Create()
     {
         TemporaryDirectory directory = TemporaryDirectory.Create();
-        string root = directory;
-        Repository.Init(root);
-        TempRepo tempRepo = new(directory, new Repository(root));
+        Repository? repository = null;
+        try
+        {
+            string root = directory;
+            Repository.Init(root);
+            repository = new Repository(root);
 
-        // The first branch is named after init.defaultBranch, which differs from machine to machine.
-        tempRepo.Repo.Refs.UpdateTarget("HEAD", "refs/heads/" + MainBranch);
+            // The first branch is named after init.defaultBranch, which differs from machine to machine.
+            repository.Refs.UpdateTarget("HEAD", "refs/heads/" + MainBranch);
 
-        return tempRepo
-            .AddFile(InitialFile, "initial\n")
-            .Stage(InitialFile)
-            .Commit("Initial commit");
+            return new TempRepo(directory, repository)
+                .AddFile(InitialFile, "initial\n")
+                .Stage(InitialFile)
+                .Commit("Initial commit");
+        }
+        catch
+        {
+            // The handle first, because an open handle can lock files the delete needs.
+            repository?.Dispose();
+            directory.Dispose();
+            throw;
+        }
     }
 
     /// <summary>Writes a file to the working tree, creating its folders, and overwrites a file that exists.</summary>
