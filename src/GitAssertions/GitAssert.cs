@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 using LibGit2Sharp;
 
 namespace GitAssertions;
@@ -9,6 +11,11 @@ namespace GitAssertions;
 /// An instance holds only the repository's path, never an open handle: every read opens the repository, reads it,
 /// and closes it again before returning. So there is nothing to dispose, an instance may be stored and shared between
 /// tests that run in parallel, and the repository folder can be deleted as soon as a read has returned.
+/// <para>
+/// When reading the repository fails, for example because its folder was deleted after <see cref="Open"/>, the error
+/// is an <see cref="InvalidOperationException"/> that carries the message of the underlying Git library and nothing
+/// else, so no type of that library reaches the caller.
+/// </para>
 /// </remarks>
 public sealed class GitAssert
 {
@@ -25,21 +32,49 @@ public sealed class GitAssert
     /// cannot point a check at a different folder.
     /// </summary>
     /// <exception cref="ArgumentException">
-    /// <paramref name="repoPath"/> is null or blank, or is not the root folder of a Git repository.
+    /// <paramref name="repoPath"/> is null or blank, is not the root folder of a Git repository, or is a bare
+    /// repository, which has no working tree for the checks to read.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">
+    /// The repository cannot be read, for example because its configuration is broken.
     /// </exception>
     public static GitAssert Open(string repoPath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(repoPath);
         string fullPath = Path.GetFullPath(repoPath);
 
-        if (!Repository.IsValid(fullPath))
+        if (!WithoutLibGit2SharpExceptions(() => Repository.IsValid(fullPath)))
         {
             throw new ArgumentException(
                 $"\"{repoPath}\" is not a Git repository. Pass the folder that contains .git.",
                 nameof(repoPath));
         }
 
-        return new GitAssert(fullPath);
+        GitAssert git = new(fullPath);
+
+        // Every check reads the working tree. Without this, a bare repository would pass here and fail every check.
+        if (git.Read(static repository => repository.Info.IsBare))
+        {
+            throw new ArgumentException(
+                $"\"{repoPath}\" is a bare repository: it has no working tree for the checks to read. Pass the "
+                + "folder of a clone that has one.",
+                nameof(repoPath));
+        }
+
+        return git;
+    }
+
+    /// <summary>
+    /// Checks that the working tree holds no file Git neither tracks nor ignores, such as a file an agent created and
+    /// never added. Each file is listed by its full path, also inside a new folder. Ignored files and empty folders
+    /// pass, as they do in <c>git status</c>.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// The repository cannot be read, for example because its folder was deleted after <see cref="Open"/>.
+    /// </exception>
+    public CheckResult NoUntrackedFiles()
+    {
+        return Read(NoUntrackedFilesCheck.Run);
     }
 
     /// <summary>
@@ -49,7 +84,32 @@ public sealed class GitAssert
     /// </summary>
     internal T Read<T>(Func<Repository, T> read)
     {
-        using Repository repository = new(_repoPath);
-        return read(repository);
+        return WithoutLibGit2SharpExceptions(() =>
+        {
+            using Repository repository = new(_repoPath);
+            return read(repository);
+        });
+    }
+
+    /// <summary>
+    /// Runs <paramref name="call"/> and re-throws any LibGit2Sharp exception as an
+    /// <see cref="InvalidOperationException"/> that carries only its message. LibGit2Sharp is an implementation detail:
+    /// its exception types must not reach the caller, not even as an inner exception, which is why the original is
+    /// not attached. Every LibGit2Sharp call goes through here.
+    /// </summary>
+    [SuppressMessage(
+        "Design",
+        "MA0054:Embed the caught exception as innerException",
+        Justification = "The inner exception would hand a LibGit2Sharp type to the caller; only its message is kept.")]
+    private static T WithoutLibGit2SharpExceptions<T>(Func<T> call)
+    {
+        try
+        {
+            return call();
+        }
+        catch (LibGit2SharpException exception)
+        {
+            throw new InvalidOperationException(exception.Message);
+        }
     }
 }

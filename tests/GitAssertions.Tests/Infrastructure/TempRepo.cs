@@ -20,24 +20,6 @@ internal sealed class TempRepo : IDisposable
 
     private int _commitCount;
 
-    static TempRepo()
-    {
-        // libgit2 reads the machine's git config and its global ignore file, for example Git for Windows'
-        // core.autocrlf=true or a user's *.log rule, so the same test could pass on CI and fail on a desk. An empty
-        // search path turns those levels off. The setting is process-wide, which is the point: the library under
-        // test runs in this process and sees the same clean slate.
-        foreach (ConfigurationLevel level in new[]
-        {
-            ConfigurationLevel.ProgramData,
-            ConfigurationLevel.System,
-            ConfigurationLevel.Xdg,
-            ConfigurationLevel.Global,
-        })
-        {
-            GlobalSettings.SetConfigSearchPaths(level, []);
-        }
-    }
-
     private TempRepo(TemporaryDirectory directory, Repository repo)
     {
         _directory = directory;

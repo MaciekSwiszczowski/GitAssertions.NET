@@ -22,4 +22,13 @@
     <ProjectReference Include="..\..\src\GitAssertions\GitAssertions.csproj" />
   </ItemGroup>
 
+  <!-- The root of the repository these tests are built from, for ThisRepositoryTests. -->
+  <PropertyGroup>
+    <ThisRepositoryRoot>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)../..'))</ThisRepositoryRoot>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyMetadata Include="RepositoryRoot" Value="$(ThisRepositoryRoot)" />
+  </ItemGroup>
+
 </Project>

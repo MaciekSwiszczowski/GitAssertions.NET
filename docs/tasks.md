@@ -26,7 +26,7 @@ Version 1 is a two-day build done with agents: an empty GitHub repo with CI, the
 
 ## Phase 2: Core API
 
-- [x] **T2.1 GitAssert.Open.** Checks that a path is a repository root and keeps the path. `GitAssert` holds no `Repository` handle: every read opens the repository and disposes it before returning, so an instance has nothing to dispose and may be stored and shared. Throws a clear error for a path that isn't a repo. Tests first: open reads the right repository, a bad path throws, and one instance shared by parallel readers works.
+- [x] **T2.1 GitAssert.Open.** Checks that a path is a repository root and keeps the path. `GitAssert` holds no `Repository` handle: every read opens the repository and disposes it before returning, so an instance has nothing to dispose and may be stored and shared. Throws a clear error for a path that isn't a repo or is a bare repo, and re-throws LibGit2Sharp exceptions as `InvalidOperationException` with the message only. Tests first: open reads the right repository, a bad path throws, and one instance shared by parallel readers works.
 - [x] **T2.2 CheckResult.** `Rule`, `IsHealthy`, `Message`, `Files`, and a factory for healthy and failing results. Tests first, for the rules every check's message shares: the rule line, entries sorted ordinally, the 20-entry limit, `--` before the paths, `\n` between lines; a path with a space, a non-ASCII letter, or `+ , = @` is double-quoted in commands and a plain path is not; `Files` is sorted, read-only, and keeps every path; a healthy result is `<Rule>: OK.` with no files. What only some checks print (kinds of change, renames, commands without paths, sentence-only fix lines, a failure with no entries) is tested in Phase 3 by the checks that print it, against the spec's example messages.
 - [ ] **T2.3 Shell-safe paths and output limits.** Message formatting follows the spec's Security > Shell-safe paths and Output limits. Tests first:
   - A path with `$(...)`, a backtick, `;`, `&`, `|`, `%`, `"`, `'`, `*`, or a leading `:` is listed as an entry but left out of every command, and appears in the unsafe-path note.
@@ -40,14 +40,15 @@ Version 1 is a two-day build done with agents: an empty GitHub repo with CI, the
 
 ## Phase 3: Version 1 checks (one task each, any order after Phase 2)
 
-Each task: write the spec's v1 test scenarios as failing tests (skip the ones marked *phase two* in the spec), with at least one test asserting the full failure message against the spec's template and example, implement the check, refactor, and update the README. All scenarios are set up with LibGit2Sharp through TempRepo.
+Each task: write the spec's v1 test scenarios as failing tests (skip the ones marked *phase two* in the spec), with at least one test asserting the full failure message against the spec's template and example, implement the check, refactor, and update the README. All scenarios are set up with LibGit2Sharp through TempRepo. Also add the check to `ThisRepositoryTests`, which runs every check on this repository itself.
 
-- [ ] **T3.1 NoUntrackedFiles**, including nested folders and ignored files.
+- [x] **T3.1 NoUntrackedFiles**, including nested folders and ignored files.
 - [ ] **T3.2 NoUnstagedChanges**, including deletes and the autocrlf and file-mode edge cases.
 - [ ] **T3.3 NoStagedUncommitted** (no staged changes relative to `HEAD`), including staged deletes and renames.
 - [ ] **T3.4 NoConflicts**, including merge conflicts and delete/modify conflicts. Adds a merge helper to TempRepo.
 - [ ] **T3.5 NoOperationInProgress**, covering merge, rebase, cherry-pick, revert, and the aborted case. Adds rebase, cherry-pick, and revert helpers to TempRepo.
 - [ ] **T3.6 NoTrackedIgnoredFiles**, covering files committed before the ignore rule, force-added files, bin/obj grouping, and negated rules.
+- [ ] **T3.7 Nested repositories (Maciek investigates first).** An untracked folder that is itself a Git repository, such as `vendor/lib/`, is reported by NoUntrackedFiles as one entry, as `git status` shows it, so the check fails, as it should. But the message calls it a file, and its fix commands do not suit it: `git add` records it as an embedded repository instead of adding its files, and `git clean -f` does not delete it (that needs `-ffd`). Investigate how nested repositories (and submodules) behave, then decide the wording and fix commands, and add tests.
 
 ## Phase 4: RunAll
 

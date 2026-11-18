@@ -35,6 +35,8 @@ Test scenarios that depend on a phase-two feature (allow-listed paths, disabled 
 ## Public API (sketch)
 
 - `GitAssert.Open(string repoPath)` checks that the path is a repository root and returns a `GitAssert` that keeps the path. It holds no `Repository` handle: each check opens the repository, reads it, and disposes it before returning (`RunAll` opens it once for all checks). So `GitAssert` is not disposable, an instance may be stored and shared between tests running in parallel, and the repository folder can be deleted as soon as a check returns.
+- `Open` throws `ArgumentException` for a path that is not a repository root, and for a bare repository, which has no working tree for the checks to read.
+- No LibGit2Sharp type reaches the caller, exceptions included: a LibGit2Sharp exception from `Open` or a check is re-thrown as `InvalidOperationException` with the same message and no inner exception.
 - Each check returns a `CheckResult` with `Rule` (the check's name, e.g. `NoUntrackedFiles`), `IsHealthy`, a short `Message`, and the list of `Files`. `Files` holds every offending path, sorted ordinally and never truncated; a healthy result has an empty `Files` list.
 - Works with any test framework, e.g.
 
@@ -59,7 +61,7 @@ Each check's "Fix" below is the suggestion printed in its failure message, not s
 
 1. **NoUntrackedFiles**: no untracked files that aren't ignored. Detect with `FileStatus.NewInWorkdir`.
    - Fix: `git add` the files if they belong, or delete them, or add them to .gitignore.
-   - Tests: clean repo passes; new file in root fails and lists its path; new file in a nested untracked folder fails and lists the file (not just the folder); file matching .gitignore passes; allow-listed path passes *(phase two)*.
+   - Tests: clean repo passes; new file in root fails and lists its path; new file in a nested untracked folder fails and lists the file (not just the folder); file matching .gitignore passes; empty folders pass; edits, deletes, and staged new files pass (other checks report them); a file moved without `git mv` lists its new path, as `git status` does; allow-listed path passes *(phase two)*.
 2. **NoUnstagedChanges**: no modified or deleted files left unstaged. Detect with `ModifiedInWorkdir`, `DeletedFromWorkdir`, `RenamedInWorkdir`.
    - Fix: `git add <file>` to stage the change, or `git restore <file>` to discard it.
    - Tests: clean repo passes; edited tracked file fails; deleted tracked file fails; line-ending-only change with autocrlf set behaves as documented (set up with LibGit2Sharp in v1; checked against the real git CLI *(phase two)*); file mode change on Windows does not fail.

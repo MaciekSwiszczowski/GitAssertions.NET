@@ -1,12 +1,15 @@
 using GitAssertions.Tests.Infrastructure;
 
+using LibGit2Sharp;
+
 using Meziantou.Framework;
 
 namespace GitAssertions.Tests;
 
 /// <summary>
-/// Pins what <see cref="GitAssert.Open"/> accepts, what it says when the path is no repository, and that an instance
-/// can be shared, because it holds a path and no handle. Every check is built on an instance opened this way.
+/// Pins what <see cref="GitAssert.Open"/> accepts, what it says when the path is no repository or a bare one, that an
+/// instance can be shared, because it holds a path and no handle, and that a LibGit2Sharp error reaches the caller as
+/// a .NET exception. Every check is built on an instance opened this way.
 /// </summary>
 public sealed class GitAssertLifetimeTests
 {
@@ -77,6 +80,64 @@ public sealed class GitAssertLifetimeTests
         ShouldRefuseAsNotARepository(Path.Combine(repo.Root, "src"));
     }
 
+    // Trigger: A test author passes GitAssert a bare repository, such as a folder a server pushes to, which has history
+    //          but no checked-out files.
+    // Behavior: Open refuses, because every check reads the working tree, and the error says the repository is bare.
+    // Assertion: An ArgumentException for repoPath whose message holds the folder path and "is a bare repository".
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
+    public void Open_BareRepository_ThrowsArgumentExceptionNamingTheFolder()
+    {
+        // Arrange
+        using TemporaryDirectory folder = TemporaryDirectory.Create();
+        Repository.Init(folder.FullPath, isBare: true);
+
+        // Assert
+        ArgumentException exception = Should.Throw<ArgumentException>(() => GitAssert.Open(folder.FullPath));
+        exception.ParamName.ShouldBe("repoPath");
+        exception.Message.ShouldContain(folder.FullPath);
+        exception.Message.ShouldContain("is a bare repository");
+    }
+
+    // Trigger: A test deletes the repository folder after opening it, then runs a check on the stored instance.
+    // Behavior: The check fails with a .NET exception that carries LibGit2Sharp's message unchanged, and no
+    //           LibGit2Sharp type reaches the caller, not even as the inner exception.
+    // Assertion: Exactly an InvalidOperationException, with no inner exception, whose message equals the one
+    //            LibGit2Sharp gives for opening that folder.
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
+    public void Check_RepositoryDeletedAfterOpen_ThrowsInvalidOperationExceptionWithLibGit2SharpMessage()
+    {
+        // Arrange
+        TempRepo repo = TempRepo.Create();
+        string root = repo.Root;
+        GitAssert git;
+        using (repo)
+        {
+            git = GitAssert.Open(root);
+        }
+
+        string libGit2SharpMessage = Should.Throw<RepositoryNotFoundException>(() => new Repository(root)).Message;
+
+        // Assert
+        ShouldRethrowWithMessageOnly(() => git.NoUntrackedFiles(), libGit2SharpMessage);
+    }
+
+    // Trigger: A test author opens a repository whose .git/config a tool left broken, for example half written.
+    // Behavior: Open fails with a .NET exception that carries LibGit2Sharp's message unchanged, not with a LibGit2Sharp
+    //           type.
+    // Assertion: Exactly an InvalidOperationException, with no inner exception, whose message equals the one
+    //            LibGit2Sharp gives for that folder.
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
+    public void Open_RepositoryWithBrokenConfig_ThrowsInvalidOperationExceptionWithLibGit2SharpMessage()
+    {
+        // Arrange
+        using TempRepo repo = TempRepo.Create();
+        File.WriteAllText(Path.Combine(repo.Root, ".git", "config"), "[core\n");
+        string libGit2SharpMessage = Should.Throw<LibGit2SharpException>(() => Repository.IsValid(repo.Root)).Message;
+
+        // Assert
+        ShouldRethrowWithMessageOnly(() => GitAssert.Open(repo.Root), libGit2SharpMessage);
+    }
+
     // Trigger: A test author passes a path that never got a value, such as an unset variable or a blank string.
     // Behavior: Open refuses before it looks at the disk, and the error points at the repoPath argument.
     // Assertion: An ArgumentException (a null path gives its subclass ArgumentNullException) for repoPath.
@@ -121,5 +182,18 @@ public sealed class GitAssertLifetimeTests
         exception.ParamName.ShouldBe("repoPath");
         exception.Message.ShouldContain(path);
         exception.Message.ShouldContain("is not a Git repository");
+    }
+
+    /// <summary>
+    /// What every LibGit2Sharp failure must look like to the caller: exactly an <see cref="InvalidOperationException"/>
+    /// with LibGit2Sharp's message and no inner exception, so no LibGit2Sharp type is reachable. The expected message
+    /// is read from LibGit2Sharp itself, because the contract is that it passes through unchanged.
+    /// </summary>
+    private static void ShouldRethrowWithMessageOnly(Func<object> call, string libGit2SharpMessage)
+    {
+        InvalidOperationException exception = Should.Throw<InvalidOperationException>(call);
+        exception.GetType().ShouldBe(typeof(InvalidOperationException));
+        exception.InnerException.ShouldBeNull();
+        exception.Message.ShouldBe(libGit2SharpMessage);
     }
 }
