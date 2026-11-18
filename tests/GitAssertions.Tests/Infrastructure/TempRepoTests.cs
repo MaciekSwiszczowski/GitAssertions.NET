@@ -2,79 +2,123 @@ using LibGit2Sharp;
 
 namespace GitAssertions.Tests.Infrastructure;
 
+/// <summary>
+/// Pins what a test author gets from <see cref="TempRepo.Create"/> and <see cref="TempRepo.Dispose"/>: where the
+/// repository lives, what it starts with, that nothing from the machine's own Git setup leaks in, and that nothing is
+/// left behind afterwards. Every other test builds its scenario on these guarantees.
+/// </summary>
 public sealed class TempRepoTests
 {
-    [Fact]
+    // Trigger: A test author creates a TempRepo.
+    // Behavior: The author gets a real Git repository in a folder on disk.
+    // Assertion: The folder exists and libgit2 accepts it as a valid repository.
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
     public void Create_FolderExistsAndIsRepository()
     {
+        // Act
         using TempRepo repo = TempRepo.Create();
 
-        Assert.True(Directory.Exists(repo.Root));
-        Assert.True(Repository.IsValid(repo.Root));
+        // Assert
+        Directory.Exists(repo.Root).ShouldBeTrue();
+        Repository.IsValid(repo.Root).ShouldBeTrue();
     }
 
-    [Fact]
+    // Trigger: A test author creates a TempRepo.
+    // Behavior: The repository lives under the machine's temp folder, never inside the source tree.
+    // Assertion: The repository root starts with the temp path.
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
     public void Create_FolderIsUnderTempPath()
     {
+        // Act
         using TempRepo repo = TempRepo.Create();
 
-        Assert.StartsWith(Path.GetTempPath(), repo.Root, StringComparison.OrdinalIgnoreCase);
+        // Assert
+        repo.Root.ShouldStartWith(Path.GetTempPath(), Case.Insensitive);
     }
 
-    [Fact]
+    // Trigger: A test author creates two TempRepos in one test, for example to compare two repositories.
+    // Behavior: The two repositories never share a folder.
+    // Assertion: The two roots differ.
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
     public void Create_EachRepoGetsItsOwnFolder()
     {
+        // Act
         using TempRepo first = TempRepo.Create();
         using TempRepo second = TempRepo.Create();
 
-        Assert.NotEqual(first.Root, second.Root);
+        // Assert
+        second.Root.ShouldNotBe(first.Root);
     }
 
-    [Fact]
+    // Trigger: A test author creates a TempRepo and has not committed anything yet.
+    // Behavior: The repository starts with one commit holding readme.txt, on the branch main.
+    // Assertion: History reads one commit, "Initial commit", whose tree holds only readme.txt, and HEAD reads main.
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
     public void Create_MakesOneInitialCommitOnMain()
     {
+        // Act
         using TempRepo repo = TempRepo.Create();
 
-        Commit commit = Assert.Single(repo.Repo.Commits);
-        Assert.NotNull(commit.Tree[TempRepo.InitialFile]);
-        Assert.Equal(TempRepo.MainBranch, repo.Repo.Head.FriendlyName);
+        // Assert
+        repo.Repo.Commits.Select(commit => commit.MessageShort).ShouldBe(["Initial commit"]);
+        repo.Repo.Head.Tip.Tree.Select(entry => entry.Path).ShouldBe(["readme.txt"]);
+        repo.Repo.Head.FriendlyName.ShouldBe("main");
     }
 
-    [Fact]
+    // Trigger: A test author creates a TempRepo and touches nothing.
+    // Behavior: The working tree is clean, so whatever a test changes next is the only change in the status.
+    // Assertion: The status lists no file at all.
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
     public void Create_WorkingTreeIsClean()
     {
+        // Act
         using TempRepo repo = TempRepo.Create();
 
-        Assert.False(repo.Repo.RetrieveStatus().IsDirty);
+        // Assert
+        repo.Repo.RetrieveStatus().Select(entry => entry.FilePath).ShouldBeEmpty();
     }
 
-    [Fact]
+    // Trigger: A test author creates a TempRepo on a machine with its own Git config, such as core.autocrlf.
+    // Behavior: Only the repository's own config applies, so a test gives the same result on CI and on a desk.
+    // Assertion: Every config entry the repository can see comes from the Local level.
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
     public void Create_ReadsNoMachineLevelGitConfig()
     {
+        // Act
         using TempRepo repo = TempRepo.Create();
 
-        Assert.All(repo.Repo.Config, entry => Assert.Equal(ConfigurationLevel.Local, entry.Level));
+        // Assert
+        repo.Repo.Config.Select(entry => entry.Level).Distinct().ShouldBe([ConfigurationLevel.Local]);
     }
 
-    [Fact]
+    // Trigger: A test author's test ends and its TempRepo is disposed.
+    // Behavior: Nothing is left behind under the temp folder, .git included.
+    // Assertion: The folder the repository lived in no longer exists.
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
     public void Dispose_DeletesFolder()
     {
+        // Arrange
         TempRepo repo = TempRepo.Create();
         string root = repo.Root;
 
+        // Act
         repo.Dispose();
 
-        Assert.False(Directory.Exists(root));
+        // Assert
+        Directory.Exists(root).ShouldBeFalse();
     }
 
-    [Fact]
+    // Trigger: A test disposes its TempRepo by hand, and its using declaration disposes it again at the end.
+    // Behavior: The second Dispose does nothing and raises nothing.
+    // Assertion: Disposing a second time throws no exception.
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
     public void Dispose_Twice_DoesNotThrow()
     {
+        // Arrange
         TempRepo repo = TempRepo.Create();
         repo.Dispose();
 
-        Exception? exception = Record.Exception(repo.Dispose);
-
-        Assert.Null(exception);
+        // Assert
+        Should.NotThrow(repo.Dispose);
     }
 }

@@ -14,7 +14,11 @@ internal sealed class TempRepo : IDisposable
 
     public const string InitialFile = "readme.txt";
 
+    private static readonly DateTimeOffset FixtureEpoch = new(2020, 1, 1, 0, 0, 0, TimeSpan.Zero);
+
     private readonly TemporaryDirectory _directory;
+
+    private int _commitCount;
 
     static TempRepo()
     {
@@ -74,9 +78,14 @@ internal sealed class TempRepo : IDisposable
         return this;
     }
 
+    /// <summary>
+    /// Commits the index. Each commit is stamped from a fixed UTC base, one minute after the one before, as author
+    /// and committer alike, so a scenario builds the same history on any machine in any month.
+    /// </summary>
     public TempRepo Commit(string message = "Commit")
     {
-        Signature signature = new("GitAssertions Tests", "tests@gitassertions.invalid", DateTimeOffset.Now);
+        DateTimeOffset when = FixtureEpoch.AddMinutes(_commitCount++);
+        Signature signature = new("GitAssertions Tests", "tests@gitassertions.invalid", when);
         Repo.Commit(message, signature, signature);
         return this;
     }

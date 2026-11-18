@@ -2,18 +2,20 @@
 
   <PropertyGroup>
     <IsPackable>false</IsPackable>
+    <!--
+      xUnit1069 wants TestContext.Current.CancellationToken in every test that has a Timeout. The tests here are
+      synchronous LibGit2Sharp and file calls, none of which takes a token, so there is nothing to pass it to.
+    -->
+    <NoWarn>$(NoWarn);xUnit1069</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="LibGit2Sharp" />
     <PackageReference Include="Meziantou.Framework.TemporaryDirectory" />
+    <PackageReference Include="Shouldly" />
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Using Include="Xunit" />
   </ItemGroup>
 
   <ItemGroup>

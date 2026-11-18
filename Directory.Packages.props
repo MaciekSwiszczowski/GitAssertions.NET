@@ -15,6 +15,8 @@
     <!-- Kept beside Microsoft.Testing.Platform for IDE test discovery. -->
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
+    <!-- The assertion library for every test: a failure prints the expected and the actual value. -->
+    <PackageVersion Include="Shouldly" Version="4.3.0" />
     <!-- A disposable temp folder whose delete handles read-only files and links; used by the TempRepo test fixture. -->
     <PackageVersion Include="Meziantou.Framework.TemporaryDirectory" Version="3.0.17" />
   </ItemGroup>
