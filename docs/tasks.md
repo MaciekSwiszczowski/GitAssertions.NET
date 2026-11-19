@@ -40,7 +40,7 @@ Version 1 is a two-day build done with agents: an empty GitHub repo with CI, the
 
 ## Phase 3: Version 1 checks (one task each, any order after Phase 2)
 
-Each task: write the spec's v1 test scenarios as failing tests (skip the ones marked *phase two* in the spec), with at least one test asserting the full failure message against the spec's template and example, implement the check, refactor, and update the README. All scenarios are set up with LibGit2Sharp through TempRepo. Also add the check to `ThisRepositoryTests`, which runs every check on this repository itself.
+Each task: write the spec's v1 test scenarios as failing snapshot tests (skip the ones marked *phase two* in the spec). A failing scenario ends in `CheckResultSnapshot.Verify` and a healthy one in `CheckResultSnapshot.VerifyHealthy`, which shares one `<Check>.IsHealthy.verified.txt` between all of them. Each `.verified.txt` is written by hand before the check exists, a failing scenario's from the spec's template and example message (see AGENTS.md and the `snapshot-tests-csharp` skill). Then implement the check, refactor, and update the README. All scenarios are set up with LibGit2Sharp through TempRepo. Also add the check to `ThisRepositoryTests`, which runs every check on this repository itself.
 
 - [x] **T3.1 NoUntrackedFiles**, including nested folders and ignored files.
 - [ ] **T3.2 NoUnstagedChanges**, including deletes and the autocrlf and file-mode edge cases.

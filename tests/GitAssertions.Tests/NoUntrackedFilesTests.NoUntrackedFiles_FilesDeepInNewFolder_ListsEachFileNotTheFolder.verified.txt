@@ -1,0 +1,14 @@
+﻿Rule: NoUntrackedFiles
+IsHealthy: False
+Files (2):
+  tmp/a.txt
+  tmp/sub/deeper/b.txt
+Message:
+NoUntrackedFiles: 2 untracked files found.
+  tmp/a.txt
+  tmp/sub/deeper/b.txt
+Fix:
+  git add -- tmp/a.txt tmp/sub/deeper/b.txt
+Or delete them:
+  git clean -f -- tmp/a.txt tmp/sub/deeper/b.txt
+Or ignore them: add the paths to .gitignore.

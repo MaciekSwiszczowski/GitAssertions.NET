@@ -1,5 +1,7 @@
 using System.Reflection;
 
+using GitAssertions.Tests.Infrastructure;
+
 namespace GitAssertions.Tests;
 
 /// <summary>
@@ -22,14 +24,15 @@ public sealed class ThisRepositoryTests
 
     // Trigger: An agent working on this repository creates a file and adds it neither to Git nor to .gitignore.
     // Behavior: The suite fails, and the failure names the file and the commands that fix it.
-    // Assertion: The message reads "NoUntrackedFiles: OK."; on a failure, the check's whole message is shown.
+    // Assertion: The shared healthy snapshot: a healthy result with no files. On a failure, the received file holds
+    //            the check's whole result.
     [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
-    public void NoUntrackedFiles_ThisRepository_IsHealthy()
+    public Task NoUntrackedFiles_ThisRepository_IsHealthy()
     {
         // Act
         CheckResult result = GitAssert.Open(RepositoryRoot).NoUntrackedFiles();
 
         // Assert
-        result.Message.ShouldBe("NoUntrackedFiles: OK.");
+        return CheckResultSnapshot.VerifyHealthy(nameof(GitAssert.NoUntrackedFiles), result);
     }
 }

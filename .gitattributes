@@ -1,0 +1,6 @@
+# Verify snapshot files. Verify rejects a verified file that holds a carriage return, so they stay LF on every
+# checkout whatever core.autocrlf says. The first line is spelled exactly as VerifyChecks.Run (VerifyConventionsTests)
+# looks for it. https://github.com/VerifyTests/Verify#text-file-settings
+*.verified.txt text eol=lf working-tree-encoding=UTF-8
+# Trailing whitespace in a snapshot is content, so git diff --check must not flag it.
+*.verified.txt -whitespace

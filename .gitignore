@@ -485,3 +485,8 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Verify snapshot tests: a received file is the output of a failed run and is never committed. Only the formats the
+# tests verify, and only in test projects, so no other file with ".received." in its name is ever hidden.
+tests/**/*.received.txt
+tests/**/*.received.json

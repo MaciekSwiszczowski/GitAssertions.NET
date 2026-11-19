@@ -1,0 +1,14 @@
+﻿Rule: NoUntrackedFiles
+IsHealthy: False
+Files (2):
+  docs/my notes.md
+  tmp/notes.txt
+Message:
+NoUntrackedFiles: 2 untracked files found.
+  docs/my notes.md
+  tmp/notes.txt
+Fix:
+  git add -- "docs/my notes.md" tmp/notes.txt
+Or delete them:
+  git clean -f -- "docs/my notes.md" tmp/notes.txt
+Or ignore them: add the paths to .gitignore.

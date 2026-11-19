@@ -60,6 +60,25 @@ asks). Delete scratch files rather than leave them untracked. When you are unsur
 **Why:** this library exists to catch agents that leave a repository broken, and `ThisRepositoryTests` runs its
 checks on this repository: an untracked file fails the suite.
 
+## Check tests are snapshot tests
+
+Every test that runs a check ends in a `CheckResultSnapshot` call and asserts nothing else: the whole `CheckResult`
+(rule, health, files, message) is pinned in a `.verified.txt` file beside the test class. Read the
+`snapshot-tests-csharp` skill before writing or changing one. In this repository:
+
+- A failing scenario ends in `CheckResultSnapshot.Verify(result)` and has a verified file of its own.
+- A healthy scenario ends in `CheckResultSnapshot.VerifyHealthy(nameof(GitAssert.<Check>), result)`. Every healthy
+  scenario of a check, in any test class, shares one file, `<Check>.IsHealthy.verified.txt`, because a healthy result
+  is the same whatever the scenario.
+- Write the `.verified.txt` by hand first, a failing check's from the spec's template and example message, then make
+  the code match it. Never accept a first-run received file unread.
+- Run tests with `DiffEngine_Disabled=true`, so a mismatch opens no diff tool on the user's desktop.
+- Stage verified files with their test, rename them with the test (`git mv`), and never commit a `.received.*` file.
+- Verify is pinned exactly, `[32.0.0]`, the last free version: the next version is not free. Do not upgrade it
+  without the user's decision on the fee (see `Directory.Packages.props`).
+
+Tests of `Open`, of exceptions, and of `CheckResult` itself stay value tests with Shouldly.
+
 ## Make every lambda that can be static `static`
 
 Review every lambda and anonymous method you write or touch. If it captures nothing (no local, no parameter, no

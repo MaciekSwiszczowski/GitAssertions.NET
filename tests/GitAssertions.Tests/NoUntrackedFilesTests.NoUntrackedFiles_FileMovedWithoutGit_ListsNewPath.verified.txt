@@ -1,0 +1,12 @@
+﻿Rule: NoUntrackedFiles
+IsHealthy: False
+Files (1):
+  docs/readme.txt
+Message:
+NoUntrackedFiles: 1 untracked file found.
+  docs/readme.txt
+Fix:
+  git add -- docs/readme.txt
+Or delete them:
+  git clean -f -- docs/readme.txt
+Or ignore them: add the paths to .gitignore.
