@@ -36,5 +36,10 @@ jobs:
       - name: Build
         run: dotnet build --configuration ${{ env.CONFIGURATION }} --no-restore
 
+      # The integration tests run the git CLI and fail on a git older than 2.32. Printing the version here, before
+      # them, traces a failure after a runner image update to the git it brought.
+      - name: Git version
+        run: git --version
+
       - name: Test
         run: dotnet test --configuration ${{ env.CONFIGURATION }} --no-build

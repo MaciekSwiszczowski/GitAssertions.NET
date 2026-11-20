@@ -11,6 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="CliWrap" />
     <PackageReference Include="LibGit2Sharp" />
     <PackageReference Include="Meziantou.Framework.TemporaryDirectory" />
     <PackageReference Include="Shouldly" />

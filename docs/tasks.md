@@ -91,7 +91,7 @@ Each task: write the spec's v1 test scenarios as failing snapshot tests (skip th
 
 The git CLI sets up the scenarios libgit2 cannot create, and checks what libgit2 reads against what real Git does. Only the tests run git; the library never does (spec, Goals). The tests are tagged as integration tests and run on CI with all the others. A missing or too old git fails them; it never skips them.
 
-- [ ] **T5.1 CliWrap git runner.** A test helper that runs git in a TempRepo through CliWrap, with a timeout so no process is left running, and with the CLI's version of `LibGit2Isolation`. Tests first: a git command run in a TempRepo changes what `RetrieveStatus` reports. The design follows the test suites of MinVer, gitoxide, and jj, and the git runner in WindowsFileManager (`tests/WinUiFileManager.Architecture.Tests/Git.cs`):
+- [x] **T5.1 CliWrap git runner.** A test helper that runs git in a TempRepo through CliWrap, with a timeout so no process is left running, and with the CLI's version of `LibGit2Isolation`. Tests first: a git command run in a TempRepo changes what `RetrieveStatus` reports. The design follows the test suites of MinVer, gitoxide, and jj, and the git runner in WindowsFileManager (`tests/WinUiFileManager.Architecture.Tests/Git.cs`):
   - Process handling:
     - CliWrap alone, with no job object, so the runner also works on Linux (spec, Platforms);
     - CliWrap's forceful token is the test's cancellation token linked with the runner's own timeout. Cancelling it kills git's whole process tree and waits until it has exited. Never use the graceful token: on Windows it starts a helper program to send Ctrl+C;

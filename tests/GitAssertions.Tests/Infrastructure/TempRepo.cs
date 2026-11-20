@@ -14,6 +14,12 @@ internal sealed class TempRepo : IDisposable
 
     public const string InitialFile = "readme.txt";
 
+    /// <summary>The author and committer of every commit a scenario makes, by libgit2 here and by the git CLI in GitCli.</summary>
+    public const string AuthorName = "GitAssertions Tests";
+
+    /// <summary>The address of <see cref="AuthorName"/>. The <c>.invalid</c> top-level domain can never be real.</summary>
+    public const string AuthorEmail = "tests@gitassertions.invalid";
+
     private static readonly DateTimeOffset FixtureEpoch = new(2020, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
     private readonly TemporaryDirectory _directory;
@@ -138,7 +144,7 @@ internal sealed class TempRepo : IDisposable
             branch: null,
             Repo.Branches[upstream],
             onto: null,
-            new Identity("GitAssertions Tests", "tests@gitassertions.invalid"),
+            new Identity(AuthorName, AuthorEmail),
             options: null);
         return this;
     }
@@ -163,6 +169,16 @@ internal sealed class TempRepo : IDisposable
     {
         Repo.Revert(Repo.Lookup<Commit>(commitish), NextSignature());
         return this;
+    }
+
+    /// <summary>
+    /// Runs the git CLI in this repository, for the scenarios libgit2 cannot set up, and returns what git wrote to
+    /// standard output. Git runs cut off from the machine's and the user's config (<see cref="GitCli"/>). A command that
+    /// exits with a failure throws.
+    /// </summary>
+    public Task<string> GitAsync(params string[] arguments)
+    {
+        return GitCli.RunAsync(Root, arguments);
     }
 
     /// <summary>Deletes a file from the working tree only; the index is left alone.</summary>
@@ -222,7 +238,7 @@ internal sealed class TempRepo : IDisposable
     private Signature NextSignature()
     {
         DateTimeOffset when = FixtureEpoch.AddMinutes(_commitCount++);
-        return new Signature("GitAssertions Tests", "tests@gitassertions.invalid", when);
+        return new Signature(AuthorName, AuthorEmail, when);
     }
 
     /// <summary>Releases the repository handle first, because an open handle can lock files under .git.</summary>
