@@ -1,0 +1,5 @@
+﻿Rule: NoUntrackedFiles
+IsHealthy: True
+Files (0):
+Message:
+NoUntrackedFiles: OK.

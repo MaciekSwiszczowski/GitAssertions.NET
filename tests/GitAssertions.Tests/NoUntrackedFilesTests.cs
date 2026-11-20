@@ -123,7 +123,8 @@ public sealed class NoUntrackedFilesTests
     }
 
     // Trigger: An agent edits one tracked file, deletes another, and stages a new one, but leaves nothing untracked.
-    // Behavior: Edits, deletes, and staged files are other checks' business, so this check passes.
+    // Behavior: Edits and deletes are the unstaged-changes check's business, and a staged file is not untracked, so
+    //           this check passes.
     // Assertion: The snapshot shows a healthy result with no files.
     [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
     public async Task NoUntrackedFiles_OnlyTrackedOrStagedChanges_IsHealthy()

@@ -54,11 +54,20 @@ crashed the whole test host with a native access violation, and only a question 
 
 ## Keep Git healthy while you work
 
-Stage every file you create, as soon as it exists (`git add`; staging only, never a commit or push unless the user
-asks). Delete scratch files rather than leave them untracked. When you are unsure what to do with the Git state, ask.
+When you finish, every change you made is staged, and nothing is left untracked or unstaged. The developer reviews
+the staged changeset and commits it if they are happy with it.
 
-**Why:** this library exists to catch agents that leave a repository broken, and `ThisRepositoryTests` runs its
-checks on this repository: an untracked file fails the suite.
+- Stage each change as you make it: `git add` a file you create or edit, `git rm` a file you delete, `git mv` a file
+  you move or rename. Stage before you run the tests too: `ThisRepositoryTests` runs this library's checks on this
+  repository itself.
+- Staging only: never commit or push unless the user asks.
+- Delete scratch files rather than leave them untracked.
+- Stage only your own changes. If the working tree holds changes you did not make, or you are unsure what to do with
+  the Git state, ask.
+
+**Why:** this library exists to catch agents that leave a repository broken, and a fully staged changeset is the
+healthy end of an agent's work: nothing is lost, and nothing is committed without a person. On 2026-11-19 the user
+replaced the earlier rule, which staged only new files and left edits and deletes unstaged.
 
 ## Check tests are snapshot tests
 

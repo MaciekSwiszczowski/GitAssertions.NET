@@ -1,0 +1,13 @@
+﻿Rule: NoUnstagedChanges
+IsHealthy: False
+Files (2):
+  old.txt
+  readme.txt
+Message:
+NoUnstagedChanges: 2 files have unstaged changes.
+  deleted: old.txt
+  modified: readme.txt
+Fix:
+  git add -- old.txt readme.txt
+Or discard the changes:
+  git restore -- old.txt readme.txt

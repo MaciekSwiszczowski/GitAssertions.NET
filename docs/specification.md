@@ -10,8 +10,8 @@ The library is **read-only**. It inspects the repository and reports what it fin
 
 Version 1 is a two-day build done with agents. Everything else waits for phase two and gets added when it's needed.
 
-- **Version 1:** NoUntrackedFiles, NoUnstagedChanges, NoStagedUncommitted, NoConflicts, NoOperationInProgress, NoTrackedIgnoredFiles, and a plain RunAll with no options (every v1 check always runs). Unit tests use LibGit2Sharp only, so every v1 scenario is set up in-process.
-- **Phase two:** NoMixedStaging (already covered by the staged and unstaged checks), NotDetachedHead, OnExpectedBranch, NoStaleIndexLock, configuration (enabling and disabling checks, allow-lists, expected branch), the CliWrap real-Git integration tests, and NuGet packaging. Use a project reference until then.
+- **Version 1:** NoUntrackedFiles, NoUnstagedChanges, NoConflicts, NoOperationInProgress, NoTrackedIgnoredFiles, and a plain RunAll with no options (every v1 check always runs). Unit tests use LibGit2Sharp only, so every v1 scenario is set up in-process.
+- **Phase two:** a `typechange` entry kind for NoUnstagedChanges (a tracked file replaced by another type, such as a symlink), an intent-to-add kind for NoUnstagedChanges (a file recorded with `git add -N`, which gets `git add` and no discard line), NoMixedStaging (a narrower check than NoUnstagedChanges, which also reports a file changed again after it was staged; its own method, left out of the default `RunAll` so no file prints twice), NotDetachedHead, OnExpectedBranch, NoStaleIndexLock, configuration (enabling and disabling checks, allow-lists, expected branch), the CliWrap real-Git integration tests, and NuGet packaging. Use a project reference until then.
 
 Test scenarios that depend on a phase-two feature (allow-listed paths, disabled checks, verification against the real git CLI) are marked *(phase two)* below and are not part of v1.
 
@@ -26,6 +26,7 @@ Test scenarios that depend on a phase-two feature (allow-listed paths, disabled 
 
 - Hooks, sparse checkout, worktrees and other advanced Git features.
 - Full parity with every edge case of the git CLI.
+- A check for staged changes that are not committed. An agent is expected to stage its work and leave the commit to a person, so a staged change is the healthy end of a task, not a broken state.
 
 ## Technology
 
@@ -61,42 +62,45 @@ Each check's "Fix" below is the suggestion printed in its failure message, not s
 
 1. **NoUntrackedFiles**: no untracked files that aren't ignored. Detect with `FileStatus.NewInWorkdir`.
    - Fix: `git add` the files if they belong, or delete them, or add them to .gitignore.
-   - Tests: clean repo passes; new file in root fails and lists its path; new file in a nested untracked folder fails and lists the file (not just the folder); file matching .gitignore passes; empty folders pass; edits, deletes, and staged new files pass (other checks report them); a file moved without `git mv` lists its new path, as `git status` does; allow-listed path passes *(phase two)*.
-2. **NoUnstagedChanges**: no modified or deleted files left unstaged. Detect with `ModifiedInWorkdir`, `DeletedFromWorkdir`, `RenamedInWorkdir`.
+   - Tests: clean repo passes; new file in root fails and lists its path; new file in a nested untracked folder fails and lists the file (not just the folder); file matching .gitignore passes; empty folders pass; edits, deletes, and staged new files pass (NoUnstagedChanges reports the edits and deletes); a file moved without `git mv` lists its new path, as `git status` does; allow-listed path passes *(phase two)*.
+2. **NoUnstagedChanges**: no modified or deleted files left unstaged. Detect with `ModifiedInWorkdir`, `DeletedFromWorkdir`. The check reports what `git status` reports, so a file moved without `git mv` is its old path, deleted (its new path is untracked, for NoUntrackedFiles), and a change of line endings only is reported when `git status` reports it. A tracked file replaced by another type, such as a symlink, which `git status` prints as `typechange`, is not reported in v1 (phase two). A file recorded with `git add -N` (intent to add) is not supported in v1 (phase two): it is reported as `modified`, and the `git restore` line offered for it would empty the file, because the index holds it with no content.
    - Fix: `git add <file>` to stage the change, or `git restore <file>` to discard it.
-   - Tests: clean repo passes; edited tracked file fails; deleted tracked file fails; line-ending-only change with autocrlf set behaves as documented (set up with LibGit2Sharp in v1; checked against the real git CLI *(phase two)*); file mode change on Windows does not fail.
-3. **NoStagedUncommitted**: no staged changes relative to `HEAD` (the index matches the `HEAD` commit; the index itself is not expected to be empty). Detect with `NewInIndex`, `ModifiedInIndex`, `DeletedFromIndex`, `RenamedInIndex`.
-   - Fix: `git commit`, or `git restore --staged <file>` to unstage.
-   - Tests: clean repo passes; staged new file fails; staged edit fails; staged delete (`git rm`) fails; staged rename fails and reports both paths.
-4. **NoMixedStaging**: no file both staged and changed again.
+   - Tests: clean repo passes; edited tracked file fails; deleted tracked file fails; a file moved without `git mv` lists the old path as deleted; a file staged and then edited again fails as modified (`MM`, `AM`), and one staged and then deleted fails as deleted (`AD`); line-ending-only change with autocrlf set behaves as documented (set up with LibGit2Sharp in v1; checked against the real git CLI *(phase two)*); file mode change on Windows does not fail.
+3. **NoMixedStaging** *(phase two)*: no file both staged and changed again. Narrower than NoUnstagedChanges, which reports these files too, and the only check for someone who keeps other unstaged edits on purpose. Called on its own, not part of the default `RunAll`.
    - Fix: `git add <file>` to stage the latest version, then commit.
    - Tests: staged-only file passes this check; unstaged-only file passes this check; staged then edited again fails; staged then deleted from disk fails.
-5. **NoConflicts**: no conflicted entries. Detect with `FileStatus.Conflicted` / `repo.Index.Conflicts`.
+4. **NoConflicts**: no conflicted entries. Detect with `FileStatus.Conflicted` / `repo.Index.Conflicts`.
    - Fix: resolve the conflict markers in the file, then `git add <file>`; then finish the operation (see NoOperationInProgress).
    - Tests: clean repo passes; merge of two branches editing the same line fails and lists the file; conflict resolved and staged passes; delete/modify conflict fails.
-6. **NoOperationInProgress**: no unfinished merge, rebase, cherry-pick or revert. Detect with `repo.Info.CurrentOperation`.
+5. **NoOperationInProgress**: no unfinished merge, rebase, cherry-pick or revert. Detect with `repo.Info.CurrentOperation`.
    - Fix: `git <operation> --continue` once conflicts are resolved, or `git <operation> --abort`, where `<operation>` is merge, rebase, cherry-pick, or revert.
    - Tests: clean repo passes; conflicting merge left open fails and names "merge"; conflicting rebase left open fails and names "rebase"; conflicting cherry-pick left open fails and names "cherry-pick"; conflicting revert left open fails and names "revert"; aborted operation passes.
-7. **NotDetachedHead**: HEAD points to a branch. Detect with `repo.Info.IsHeadDetached`.
+6. **NotDetachedHead**: HEAD points to a branch. Detect with `repo.Info.IsHeadDetached`.
    - Fix: `git switch <branch>` (create one with `git switch -c` if the commits must be kept).
    - Tests: on a branch passes; checkout of a commit SHA fails and the message shows the SHA; fresh repo with no commits (unborn HEAD) passes.
-8. **NoStaleIndexLock**: no `.git/index.lock` left behind.
+7. **NoStaleIndexLock**: no `.git/index.lock` left behind.
    - Fix: make sure no Git process is running, then delete `.git/index.lock`.
    - Tests: no lock passes; empty `index.lock` file fails; lock in a worktree or submodule .git path is out of scope and documented.
-9. **OnExpectedBranch**: HEAD is on the configured branch (optional).
+8. **OnExpectedBranch**: HEAD is on the configured branch (optional).
    - Fix: `git switch <expected-branch>`.
    - Tests: matching branch passes; other branch fails and shows both names; not configured means the check is skipped; detached HEAD fails with a clear message.
-10. **NoTrackedIgnoredFiles**: no tracked files that match ignore rules. Detect with `repo.Ignore.IsPathIgnored` on tracked paths.
-    - Fix: `git rm --cached <file>` (the file stays on disk), then commit.
-    - Tests: tracked file not ignored passes; file committed before the ignore rule was added fails; file force-added with `git add -f` fails; bin/ and obj/ folder content fails and is grouped by folder; negated rule (`!keep.txt`) passes.
+9. **NoTrackedIgnoredFiles**: no tracked files that match ignore rules. Detect with `repo.Ignore.IsPathIgnored` on tracked paths.
+   - Fix: `git rm --cached <file>` (the file stays on disk), then commit.
+   - Tests: tracked file not ignored passes; file committed before the ignore rule was added fails; file force-added with `git add -f` fails; bin/ and obj/ folder content fails and is grouped by folder; negated rule (`!keep.txt`) passes.
 
 Cross-cutting tests: `RunAll` reports every failing check at once (two broken rules give two `Failures` and two message blocks in `Message`); a clean repo makes `RunAll` healthy; disabled checks are skipped *(phase two)*; no repo handle outlives a check (the temp folder can be deleted on Windows right after a check, with nothing disposed); a path that isn't a repository throws a clear error.
 
 ## Test tooling
 
-- Unit tests (v1) use LibGit2Sharp to set up scenarios: in-process, fast, and no git processes to clean up.
+- Unit tests (v1) use LibGit2Sharp to set up scenarios: in-process, fast, and no git processes to clean up. They cut libgit2 off from the machine's and the user's git config, so a scenario gives the same result on every machine.
+- `ThisRepositoryTests` runs every check on this repository itself. It lives in a test project of its own, `GitAssertions.ThisRepository.Tests`, which does not cut libgit2 off from git config: libgit2 settings are process-wide, and a real repository has to be read as `git status` reads it, as a user's own test project reads theirs.
 - Phase two: a small set of integration tests creates the tricky scenarios with the real git CLI, so libgit2 is checked against real Git: autocrlf / line endings, `git add -f`, files committed before an ignore rule, a merge or rebase left in progress, and a stale index.lock.
 - The CLI tests run git through CliWrap, with a timeout and cancellation so no process is left running. They're tagged as integration tests and skipped when git isn't on PATH.
+
+### Platforms
+
+- v1 builds and runs its tests on Windows only (`windows-latest`).
+- **Before the first public release (1.0), the tests also run on Linux** (`ubuntu-latest`), in CI next to the Windows run. Linux behaves differently in ways the checks depend on: the executable bit is a real file mode, symbolic links need no privileges, paths are case-sensitive, and no machine-wide `core.autocrlf` is set. A test that depends on one platform's behavior, such as the file mode test, is written for each platform or skipped on the one where it does not apply, and says so in its header.
 
 ## Configuration (phase two)
 
@@ -123,7 +127,7 @@ Or <alternative description>:
 ```
 
 - **First line:** the rule name, a colon, and a one-sentence summary with the count, e.g. `NoUnstagedChanges: 2 files have unstaged changes.` Use the singular form for one item (`1 file has`).
-- **Entries:** one per line, indented two spaces. Paths are relative to the repository root and use `/` separators. Where a check reports a kind of change, the entry is `<kind>: <path>`. Entries are sorted ordinally by their whole line, so the entries of one kind stay together (`new: src/Feature.cs` comes before `renamed: a.txt -> b.txt`), and commands list the paths in entry order.
+- **Entries:** one per line, indented two spaces. Paths are relative to the repository root and use `/` separators. Where a check reports a kind of change, the entry is `<kind>: <path>`. Entries are sorted ordinally by their whole line, so the entries of one kind stay together (`deleted: old.txt` comes before `modified: readme.txt`), and commands list the paths in entry order.
 - **Limit:** at most 20 entries. When there are more, the 21st line is `  ...and <n> more. Run the check again after fixing these.` `CheckResult.Files` still holds every offending path. Path length and total message size are capped too (see [Output limits](#output-limits)).
 - **`Fix:`** one command line, indented two spaces, that fixes exactly the listed entries when run from the repository root. Paths are separated from options with `--`.
 - **`Or ...:`** zero or more alternatives, each with its own command line, or a plain sentence when there is no single command (e.g. editing .gitignore).
@@ -159,7 +163,7 @@ Or ignore them: add the paths to .gitignore.
 
 ### NoUnstagedChanges
 
-Entry kinds: `modified`, `deleted`, `renamed` (`renamed: <old> -> <new>`; both paths go into the commands).
+Entry kinds: `modified`, `deleted`. There is no `renamed` kind: a file moved without `git mv` is listed as its old path, `deleted`.
 
 ```text
 NoUnstagedChanges: <n> file(s) have unstaged changes.
@@ -180,31 +184,6 @@ Fix:
   git add -- old.txt readme.txt
 Or discard the changes:
   git restore -- old.txt readme.txt
-```
-
-### NoStagedUncommitted
-
-Entry kinds: `new`, `modified`, `deleted`, `renamed` (`renamed: <old> -> <new>`; both paths go into the unstage command).
-
-```text
-NoStagedUncommitted: <n> staged change(s) not committed.
-  <kind>: <path>
-Fix:
-  git commit
-Or unstage them:
-  git restore --staged -- <paths>
-```
-
-Example:
-
-```text
-NoStagedUncommitted: 2 staged changes not committed.
-  new: src/Feature.cs
-  renamed: a.txt -> b.txt
-Fix:
-  git commit
-Or unstage them:
-  git restore --staged -- src/Feature.cs a.txt b.txt
 ```
 
 ### NoConflicts
@@ -278,7 +257,7 @@ When every check is healthy, `Message` is `All Git checks passed.`
 Otherwise it is a header line followed by the `Message` of each failing check, in `Results` order, separated by a blank line:
 
 ```text
-<f> of 6 Git checks failed.
+<f> of 5 Git checks failed.
 
 <failing check message>
 
@@ -288,7 +267,7 @@ Otherwise it is a header line followed by the `Message` of each failing check, i
 Example:
 
 ```text
-2 of 6 Git checks failed.
+2 of 5 Git checks failed.
 
 NoUntrackedFiles: 1 untracked file found.
   tmp/notes.txt
@@ -340,7 +319,7 @@ Not included in the commands above because the path contains characters that are
 
 - At most 20 entries per check (see [Common format](#common-format)).
 - A path longer than 200 characters is shortened in entries to its first 100 and last 60 characters joined by `...`, and it is treated as unsafe, so it never appears in a command.
-- A single check's `Message` is at most 16,000 characters. If a message would exceed that (which the other limits should prevent), it is cut at the last full line that fits and ends with `  ...message truncated.` A `RunAll` message is therefore at most six check messages plus its header.
+- A single check's `Message` is at most 16,000 characters. If a message would exceed that (which the other limits should prevent), it is cut at the last full line that fits and ends with `  ...message truncated.` A `RunAll` message is therefore at most five check messages plus its header.
 - `CheckResult.Files` is not truncated; it holds the raw paths for programmatic use.
 
 ### Untrusted repositories and libgit2

@@ -1,0 +1,11 @@
+﻿Rule: NoUnstagedChanges
+IsHealthy: False
+Files (1):
+  new.txt
+Message:
+NoUnstagedChanges: 1 file has unstaged changes.
+  modified: new.txt
+Fix:
+  git add -- new.txt
+Or discard the changes:
+  git restore -- new.txt

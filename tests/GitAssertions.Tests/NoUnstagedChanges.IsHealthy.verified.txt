@@ -1,0 +1,5 @@
+﻿Rule: NoUnstagedChanges
+IsHealthy: True
+Files (0):
+Message:
+NoUnstagedChanges: OK.

@@ -1,0 +1,11 @@
+﻿Rule: NoUnstagedChanges
+IsHealthy: False
+Files (1):
+  windows.txt
+Message:
+NoUnstagedChanges: 1 file has unstaged changes.
+  modified: windows.txt
+Fix:
+  git add -- windows.txt
+Or discard the changes:
+  git restore -- windows.txt

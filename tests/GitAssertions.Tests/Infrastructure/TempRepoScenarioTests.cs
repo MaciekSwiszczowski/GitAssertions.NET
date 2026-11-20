@@ -4,8 +4,9 @@ namespace GitAssertions.Tests.Infrastructure;
 
 /// <summary>
 /// Pins the scenario helpers of <see cref="TempRepo"/> (<c>AddFile</c>, <c>Stage</c>, <c>Commit</c>, <c>Delete</c>,
-/// <c>CreateBranch</c>, <c>Checkout</c>, <c>AddGitIgnore</c>): each one must leave the repository in the state its
-/// name says, because every later test sets up its own scenario with them and trusts the result.
+/// <c>StageAsExecutable</c>, <c>CreateBranch</c>, <c>Checkout</c>, <c>AddGitIgnore</c>): each one must leave the
+/// repository in the state its name says, because every later test sets up its own scenario with them and trusts the
+/// result.
 /// </summary>
 public sealed class TempRepoScenarioTests
 {
@@ -138,6 +139,24 @@ public sealed class TempRepoScenarioTests
         // Assert
         File.Exists(Path.Combine(repo.Root, TempRepo.InitialFile)).ShouldBeFalse();
         repo.Repo.RetrieveStatus(TempRepo.InitialFile).ShouldBe(FileStatus.DeletedFromWorkdir);
+    }
+
+    // Trigger: A test author stages a script as executable, the way `git add --chmod=+x` does.
+    // Behavior: The index records the executable mode on any platform, also on Windows, where a file has no
+    //           executable bit to read from disk.
+    // Assertion: The index entry for build.sh reads ExecutableFile.
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
+    public void StageAsExecutable_NewFile_IndexRecordsExecutableMode()
+    {
+        // Arrange
+        using TempRepo repo = TempRepo.Create();
+        repo.AddFile("build.sh");
+
+        // Act
+        repo.StageAsExecutable("build.sh");
+
+        // Assert
+        repo.Repo.Index["build.sh"].ShouldNotBeNull().Mode.ShouldBe(Mode.ExecutableFile);
     }
 
     // Trigger: A test author creates a branch and does not check it out.

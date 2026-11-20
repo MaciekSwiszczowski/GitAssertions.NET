@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Runs the library's checks on this repository itself, in a test project of its own, because libgit2's settings are
+    process-wide. GitAssertions.Tests cuts libgit2 off from the machine's git config (LibGit2Isolation), so its
+    TempRepo scenarios repeat on every machine. A test of a real repository needs the opposite: the config that
+    `git status` reads, such as core.autocrlf, or a CRLF file saved unchanged reads as modified. This project does
+    not isolate, so it sees what `git status` and a user's own test project see.
+  -->
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <!-- xUnit1069: see GitAssertions.Tests.csproj. -->
+    <NoWarn>$(NoWarn);xUnit1069</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Verify.XunitV3" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\GitAssertions\GitAssertions.csproj" />
+  </ItemGroup>
+
+  <!-- The snapshot helper and the timeout are shared with GitAssertions.Tests, not copied. -->
+  <ItemGroup>
+    <Compile Include="..\GitAssertions.Tests\Infrastructure\CheckResultSnapshot.cs"
+             Link="Shared\CheckResultSnapshot.cs" />
+    <Compile Include="..\GitAssertions.Tests\TestTimeouts.cs" Link="Shared\TestTimeouts.cs" />
+  </ItemGroup>
+
+  <!-- The root of the repository these tests are built from, for ThisRepositoryTests. -->
+  <PropertyGroup>
+    <ThisRepositoryRoot>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)../..'))</ThisRepositoryRoot>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyMetadata Include="RepositoryRoot" Value="$(ThisRepositoryRoot)" />
+  </ItemGroup>
+
+</Project>

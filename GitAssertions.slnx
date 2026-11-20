@@ -10,5 +10,6 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/GitAssertions.Tests/GitAssertions.Tests.csproj" />
+    <Project Path="tests/GitAssertions.ThisRepository.Tests/GitAssertions.ThisRepository.Tests.csproj" />
   </Folder>
 </Solution>

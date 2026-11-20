@@ -94,6 +94,18 @@ internal sealed class TempRepo : IDisposable
         return this;
     }
 
+    /// <summary>
+    /// Stages a file with the executable mode, like <c>git add --chmod=+x</c>. The mode is written to the index
+    /// directly, because on Windows the file system has no executable bit for staging to read.
+    /// </summary>
+    public TempRepo StageAsExecutable(string path)
+    {
+        Commands.Stage(Repo, path);
+        Repo.Index.Add(Repo.Lookup<Blob>(Repo.Index[path].Id), path, Mode.ExecutableFile);
+        Repo.Index.Write();
+        return this;
+    }
+
     /// <summary>Creates a branch at <c>HEAD</c> without checking it out.</summary>
     public TempRepo CreateBranch(string name)
     {

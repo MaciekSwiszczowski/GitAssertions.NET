@@ -1,6 +1,6 @@
 # GitAssertions.NET — TDD Task List
 
-Version 1 is a two-day build done with agents: an empty GitHub repo with CI, then six checks and RunAll. Tasks are INVEST (Independent, Negotiable, Valuable, Estimable, Small, Testable), and each feature goes red, green, refactor: failing tests from the spec first, then the simplest code that passes, then cleanup. Phase two items at the end get picked up only when they're needed.
+Version 1 is a two-day build done with agents: an empty GitHub repo with CI, then five checks and RunAll. Tasks are INVEST (Independent, Negotiable, Valuable, Estimable, Small, Testable), and each feature goes red, green, refactor: failing tests from the spec first, then the simplest code that passes, then cleanup. Phase two items at the end get picked up only when they're needed.
 
 ## Definition of done
 
@@ -40,11 +40,10 @@ Version 1 is a two-day build done with agents: an empty GitHub repo with CI, the
 
 ## Phase 3: Version 1 checks (one task each, any order after Phase 2)
 
-Each task: write the spec's v1 test scenarios as failing snapshot tests (skip the ones marked *phase two* in the spec). A failing scenario ends in `CheckResultSnapshot.Verify` and a healthy one in `CheckResultSnapshot.VerifyHealthy`, which shares one `<Check>.IsHealthy.verified.txt` between all of them. Each `.verified.txt` is written by hand before the check exists, a failing scenario's from the spec's template and example message (see AGENTS.md and the `snapshot-tests-csharp` skill). Then implement the check, refactor, and update the README. All scenarios are set up with LibGit2Sharp through TempRepo. Also add the check to `ThisRepositoryTests`, which runs every check on this repository itself.
+Each task: write the spec's v1 test scenarios as failing snapshot tests (skip the ones marked *phase two* in the spec). A failing scenario ends in `CheckResultSnapshot.Verify` and a healthy one in `CheckResultSnapshot.VerifyHealthy`, which shares one `<Check>.IsHealthy.verified.txt` between all of them. Each `.verified.txt` is written by hand before the check exists, a failing scenario's from the spec's template and example message (see AGENTS.md and the `snapshot-tests-csharp` skill). Then implement the check, refactor, and update the README. All scenarios are set up with LibGit2Sharp through TempRepo. Also add the check to `ThisRepositoryTests` (project `GitAssertions.ThisRepository.Tests`), which runs every check on this repository itself.
 
 - [x] **T3.1 NoUntrackedFiles**, including nested folders and ignored files.
-- [ ] **T3.2 NoUnstagedChanges**, including deletes and the autocrlf and file-mode edge cases.
-- [ ] **T3.3 NoStagedUncommitted** (no staged changes relative to `HEAD`), including staged deletes and renames.
+- [x] **T3.2 NoUnstagedChanges**, including deletes, files changed again after staging, and the autocrlf and file-mode edge cases.
 - [ ] **T3.4 NoConflicts**, including merge conflicts and delete/modify conflicts. Adds a merge helper to TempRepo.
 - [ ] **T3.5 NoOperationInProgress**, covering merge, rebase, cherry-pick, revert, and the aborted case. Adds rebase, cherry-pick, and revert helpers to TempRepo.
 - [ ] **T3.6 NoTrackedIgnoredFiles**, covering files committed before the ignore rule, force-added files, bin/obj grouping, and negated rules.
@@ -52,12 +51,14 @@ Each task: write the spec's v1 test scenarios as failing snapshot tests (skip th
 
 ## Phase 4: RunAll
 
-- [ ] **T4.1 RunAll.** `git.RunAll()` (no options in v1) runs all six checks and returns a `RunAllResult` as defined in the spec: `Results`, `Failures`, `IsHealthy`, and `Message`. Tests first: two broken rules produce two `Failures` and a `Message` matching the spec's RunAll template (header plus two blocks); a clean repo is healthy with six healthy `Results`.
+- [ ] **T4.1 RunAll.** `git.RunAll()` (no options in v1) runs all five checks and returns a `RunAllResult` as defined in the spec: `Results`, `Failures`, `IsHealthy`, and `Message`. Tests first: two broken rules produce two `Failures` and a `Message` matching the spec's RunAll template (header plus two blocks); a clean repo is healthy with five healthy `Results`.
 
 ## Phase two (later, when needed)
 
 - [ ] Branch protection on main, requiring CI.
-- [ ] NoMixedStaging check.
+- [ ] Linux CI leg: run restore, build, and test on `ubuntu-latest` as well as `windows-latest`, before the first public release (1.0; see the spec's Test tooling > Platforms). Fix or skip, with a stated reason, each test that depends on Windows behavior. Proof: a green CI run on both.
+- [ ] NoUnstagedChanges: the `typechange` kind (a file replaced by a symlink) and an intent-to-add kind (a file recorded with `git add -N`: `git add` only, no discard line, which needs fix commands that take only some entries' paths). Analysis: D4 and F01 in docs/review-findings.md.
+- [ ] NoMixedStaging check: a narrower check than NoUnstagedChanges, its own method, not in the default `RunAll` (D2 in docs/review-findings.md). Its scenarios (staged then edited or deleted) are already NoUnstagedChanges tests.
 - [ ] NotDetachedHead check, including unborn HEAD.
 - [ ] OnExpectedBranch check.
 - [ ] NoStaleIndexLock check.

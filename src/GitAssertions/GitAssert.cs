@@ -78,6 +78,20 @@ public sealed class GitAssert
     }
 
     /// <summary>
+    /// Checks that no tracked file differs from the index: every edit and every delete is staged. A file moved without
+    /// <c>git mv</c> reads as its old path deleted, and its new path is left to <see cref="NoUntrackedFiles"/>, as in
+    /// <c>git status</c>. Line endings and the executable bit follow the <c>core.autocrlf</c> and <c>core.filemode</c>
+    /// settings, as in <c>git status</c>.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// The repository cannot be read, for example because its folder was deleted after <see cref="Open"/>.
+    /// </exception>
+    public CheckResult NoUnstagedChanges()
+    {
+        return Read(NoUnstagedChangesCheck.Run);
+    }
+
+    /// <summary>
     /// Opens the repository, runs <paramref name="read"/> on it, and closes it before returning. Every check reads
     /// through here, so no handle outlives a call. The repository is closed once <paramref name="read"/> returns, so
     /// it must return finished data (a list, a count), never a lazy query over the repository.

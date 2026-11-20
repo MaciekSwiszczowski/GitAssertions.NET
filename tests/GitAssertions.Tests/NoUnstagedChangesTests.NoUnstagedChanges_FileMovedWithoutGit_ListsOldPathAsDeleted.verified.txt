@@ -1,0 +1,11 @@
+﻿Rule: NoUnstagedChanges
+IsHealthy: False
+Files (1):
+  readme.txt
+Message:
+NoUnstagedChanges: 1 file has unstaged changes.
+  deleted: readme.txt
+Fix:
+  git add -- readme.txt
+Or discard the changes:
+  git restore -- readme.txt
