@@ -7,7 +7,7 @@ namespace GitAssertions;
 /// Prints a failing check's message in the spec's common format (docs/specification.md, Failure messages, Common
 /// format), so every check reads the same way: the rule line; the entries, sorted ordinally by their whole line and
 /// at most <see cref="ListedEntryLimit"/> of them; then the fix blocks, whose commands name exactly the listed
-/// entries. Lines are joined by <c>\n</c>, with no newline at the end.
+/// entries. Lines are joined by <see cref="LineBreak.Lf"/>, with no line break at the end.
 /// </summary>
 internal static class FailureMessage
 {
@@ -61,7 +61,7 @@ internal static class FailureMessage
             }
         }
 
-        return string.Join('\n', lines);
+        return string.Join(LineBreak.Lf, lines);
     }
 
     private static string EntryLine(FailureEntry entry)

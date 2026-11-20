@@ -166,6 +166,6 @@ public sealed class CheckResultTests
             [FixStep.WithPaths("Fix:", "git add")], [path]);
 
         // Assert
-        result.Message.Split('\n')[^1].ShouldBe(expectedCommandLine);
+        result.Message.Split(LineBreak.Lf)[^1].ShouldBe(expectedCommandLine);
     }
 }

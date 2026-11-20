@@ -52,7 +52,7 @@ public sealed class RunAllResult
         string message = failures.Count == 0
             ? HealthyMessage
             : string.Create(CultureInfo.InvariantCulture, $"{failures.Count} of {results.Count} Git checks failed.")
-              + string.Concat(failures.Select(static failure => "\n\n" + failure.Message));
+              + string.Concat(failures.Select(static failure => LineBreak.Lf + LineBreak.Lf + failure.Message));
 
         return new RunAllResult([.. results], failures, message);
     }

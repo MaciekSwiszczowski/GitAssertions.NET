@@ -336,6 +336,6 @@ public sealed partial class GitCliTests
     private static async Task<string[]> ConfigListAsync(TempRepo repo)
     {
         string output = await repo.GitAsync("config", "--list", "--show-origin");
-        return output.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
+        return output.Split(LineBreak.Lf, StringSplitOptions.RemoveEmptyEntries);
     }
 }
