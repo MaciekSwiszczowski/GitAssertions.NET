@@ -10,8 +10,9 @@ namespace GitAssertions.Tests;
 /// conflict only when an operation stops on one; the check reads the result and does not care which operation it was.
 /// Every test is a snapshot test with no other assertion: a reviewed <c>.verified.txt</c> file beside this class holds
 /// the whole result, rule, health, files, and message. A failing scenario ends in
-/// <see cref="CheckResultSnapshot.Verify"/> and has a file of its own; every healthy one ends in
-/// <see cref="CheckResultSnapshot.VerifyHealthy"/> and shares NoConflicts.IsHealthy.verified.txt.
+/// <see cref="CheckResultSnapshot.Verify(CheckResult, string)"/> and has a file of its own; every healthy one ends in
+/// <see cref="CheckResultSnapshot.VerifyHealthy(string, CheckResult, string)"/> and shares
+/// NoConflicts.IsHealthy.verified.txt.
 /// </summary>
 public sealed class NoConflictsTests
 {
@@ -129,7 +130,7 @@ public sealed class NoConflictsTests
     // Trigger: A merge stops on a conflict in readme.txt, and an agent stages the file with git add as the merge left
     //          it, conflict markers and all.
     // Behavior: The check reads only what Git records, and git add has marked the conflict resolved, so the check
-    //           passes; it does not search files for markers (D11 in docs/review-findings.md, and the README).
+    //           passes; it does not search files for markers (docs/specification.md, Checks, and the README).
     // Assertion: The shared healthy snapshot: a healthy result with no files.
     [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
     public async Task NoConflicts_ConflictStagedWithMarkersLeft_IsHealthy()

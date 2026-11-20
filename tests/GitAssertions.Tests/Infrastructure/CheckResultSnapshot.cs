@@ -7,10 +7,10 @@ using Xunit.v3;
 namespace GitAssertions.Tests.Infrastructure;
 
 /// <summary>
-/// The snapshot every check test ends in: a <see cref="CheckResult"/> rendered as text and compared with a reviewed
-/// <c>.verified.txt</c> file beside the test class. One file pins the whole result, so a change to a message is one
-/// reviewed diff, not a hunt through string literals. Read the snapshot-tests-csharp skill before adding a snapshot
-/// test.
+/// The snapshot every check test ends in: a <see cref="CheckResult"/>, or the <see cref="RunAllResult"/> of RunAll,
+/// rendered as text and compared with a reviewed <c>.verified.txt</c> file beside the test class. One file pins the
+/// whole result, so a change to a message is one reviewed diff, not a hunt through string literals. Read the
+/// snapshot-tests-csharp skill before adding a snapshot test.
 /// </summary>
 internal static class CheckResultSnapshot
 {
@@ -23,7 +23,16 @@ internal static class CheckResultSnapshot
     /// </summary>
     public static Task Verify(CheckResult result, [CallerFilePath] string sourceFile = "")
     {
-        return Compare(result, settings: null, sourceFile);
+        return Compare(Render(result), settings: null, sourceFile);
+    }
+
+    /// <summary>
+    /// Verifies <paramref name="result"/>, what <see cref="GitAssert.RunAll"/> returned, against the snapshot of the
+    /// calling test, <c>&lt;TestClass&gt;.&lt;TestMethod&gt;.verified.txt</c>.
+    /// </summary>
+    public static Task Verify(RunAllResult result, [CallerFilePath] string sourceFile = "")
+    {
+        return Compare(Render(result), settings: null, sourceFile);
     }
 
     /// <summary>
@@ -34,6 +43,21 @@ internal static class CheckResultSnapshot
     /// </summary>
     public static Task VerifyHealthy(string rule, CheckResult result, [CallerFilePath] string sourceFile = "")
     {
+        return Compare(Render(result), SharedHealthySettings(rule), sourceFile);
+    }
+
+    /// <summary>
+    /// Verifies <paramref name="result"/>, what <see cref="GitAssert.RunAll"/> returned, against the one snapshot every
+    /// healthy RunAll shares, <c>&lt;rule&gt;.IsHealthy.verified.txt</c>, with <paramref name="rule"/> the name of
+    /// <see cref="GitAssert.RunAll"/>. As for a single check, the test names the file it expects, never the result.
+    /// </summary>
+    public static Task VerifyHealthy(string rule, RunAllResult result, [CallerFilePath] string sourceFile = "")
+    {
+        return Compare(Render(result), SharedHealthySettings(rule), sourceFile);
+    }
+
+    private static VerifySettings SharedHealthySettings(string rule)
+    {
         VerifySettings settings = new();
         settings.UseTypeName(rule);
         settings.UseMethodName("IsHealthy");
@@ -43,15 +67,15 @@ internal static class CheckResultSnapshot
         // a passing test deletes the received file a failing one has just written.
         settings.UseTextForParameters(ReceivedFileName());
         settings.IgnoreParametersForVerified();
-        return Compare(result, settings, sourceFile);
+        return settings;
     }
 
-    private static Task Compare(CheckResult result, VerifySettings? settings, string sourceFile)
+    private static Task Compare(string text, VerifySettings? settings, string sourceFile)
     {
         // Verify takes no cancellation token, so the test's deadline bounds the wait here: when the Timeout fires,
         // the await ends with the run instead of leaving the comparison running on a background thread.
         // ReSharper disable once ExplicitCallerInfoArgument - this is a needed workaround
-        return Verifier.Verify(Render(result), settings, sourceFile).ToTask()
+        return Verifier.Verify(text, settings, sourceFile).ToTask()
             .WaitAsync(TestContext.Current.CancellationToken);
     }
 
@@ -81,6 +105,38 @@ internal static class CheckResultSnapshot
         foreach (string file in result.Files)
         {
             text.Append(CultureInfo.InvariantCulture, $"  {file}\n");
+        }
+
+        text.Append("Message:\n").Append(result.Message);
+        return text.ToString();
+    }
+
+    /// <summary>
+    /// Every public property of the result. Each check result is one line, its files below it; its own message is left
+    /// out, because the check's own tests pin it and the RunAll message repeats every failing one. The failures list
+    /// only the rules, because each is one of the results above. The message comes last, exactly as it prints. Every
+    /// count is in its heading, so an empty list reads "Failures (0):" and cannot be mistaken for a missing one.
+    /// </summary>
+    private static string Render(RunAllResult result)
+    {
+        StringBuilder text = new();
+        text.Append(CultureInfo.InvariantCulture, $"IsHealthy: {result.IsHealthy}\n");
+        text.Append(CultureInfo.InvariantCulture, $"Results ({result.Results.Count}):\n");
+        foreach (CheckResult check in result.Results)
+        {
+            text.Append(
+                CultureInfo.InvariantCulture,
+                $"  {check.Rule}: IsHealthy {check.IsHealthy}, Files ({check.Files.Count}):\n");
+            foreach (string file in check.Files)
+            {
+                text.Append(CultureInfo.InvariantCulture, $"    {file}\n");
+            }
+        }
+
+        text.Append(CultureInfo.InvariantCulture, $"Failures ({result.Failures.Count}):\n");
+        foreach (CheckResult failure in result.Failures)
+        {
+            text.Append(CultureInfo.InvariantCulture, $"  {failure.Rule}\n");
         }
 
         text.Append("Message:\n").Append(result.Message);

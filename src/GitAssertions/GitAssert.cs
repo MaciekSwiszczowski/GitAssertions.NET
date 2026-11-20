@@ -137,6 +137,30 @@ public sealed class GitAssert
     }
 
     /// <summary>
+    /// Runs every check, one after another and in a fixed order, each exactly as if it were called on its own, and
+    /// reports all of them at once: a failing check does not stop the checks after it, so one run names every broken
+    /// rule.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// A check cannot read the repository, for example because its folder was deleted after <see cref="Open"/>. The
+    /// exception is that check's own, and the checks after it do not run: a repository one check cannot read usually
+    /// fails the others too, so going on would only repeat the error, after each had spent its own time failing.
+    /// </exception>
+    public RunAllResult RunAll()
+    {
+        // A collection expression evaluates its elements in order, so a check that throws ends the run here and the
+        // checks after it never start.
+        return RunAllResult.Create(
+        [
+            NoUntrackedFiles(),
+            NoUnstagedChanges(),
+            NoConflicts(),
+            NoOperationInProgress(),
+            NoTrackedIgnoredFiles(),
+        ]);
+    }
+
+    /// <summary>
     /// Opens the repository, runs <paramref name="read"/> on it, and closes it before returning. Every check reads
     /// through here, so no handle outlives a call. The repository is closed once <paramref name="read"/> returns, so
     /// it must return finished data (a list, a count), never a lazy query over the repository.

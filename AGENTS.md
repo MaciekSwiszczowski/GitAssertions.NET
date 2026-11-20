@@ -79,6 +79,10 @@ Every test that runs a check ends in a `CheckResultSnapshot` call and asserts no
 - A healthy scenario ends in `CheckResultSnapshot.VerifyHealthy(nameof(GitAssert.<Check>), result)`. Every healthy
   scenario of a check, in any test class, shares one file, `<Check>.IsHealthy.verified.txt`, because a healthy result
   is the same whatever the scenario.
+- `RunAll` is covered the same way: `CheckResultSnapshot.Verify` and `CheckResultSnapshot.VerifyHealthy` take a
+  `RunAllResult` too. A healthy `RunAll` ends in `VerifyHealthy(nameof(GitAssert.RunAll), result)` and shares
+  `RunAll.IsHealthy.verified.txt`. Each result is one line with its files below it, and its own message is left out:
+  the check's tests pin it, and the `RunAll` message repeats every failing one.
 - Write the `.verified.txt` by hand first, a failing check's from the spec's template and example message, then make
   the code match it. Never accept a first-run received file unread.
 - Run tests with `DiffEngine_Disabled=true`, so a mismatch opens no diff tool on the user's desktop.

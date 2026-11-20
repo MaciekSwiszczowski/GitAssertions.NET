@@ -8,10 +8,11 @@ namespace GitAssertions.Tests;
 /// nor aborted fails the check, and the message names the operation and its own <c>--continue</c> and <c>--abort</c>
 /// commands. Every conflict here is set up with LibGit2Sharp, which leaves the operation in progress as Git does. Any
 /// other operation uses the generic message and is not tested in v1: libgit2 cannot set up a bisect or a sequence, and
-/// Git's state files are never written by hand (D15 in docs/review-findings.md). Every test is a snapshot test with no
-/// other assertion: a reviewed <c>.verified.txt</c> file beside this class holds the whole result, rule, health, files,
-/// and message. A failing scenario ends in <see cref="CheckResultSnapshot.Verify"/> and has a file of its own; the
-/// healthy one ends in <see cref="CheckResultSnapshot.VerifyHealthy"/> and shares
+/// Git's state files are never written by hand (docs/specification.md, Test tooling). Every test is a snapshot test
+/// with no other assertion: a reviewed <c>.verified.txt</c> file beside this class holds the whole result, rule,
+/// health, files, and message. A failing scenario ends in
+/// <see cref="CheckResultSnapshot.Verify(CheckResult, string)"/> and has a file of its own; the healthy one ends in
+/// <see cref="CheckResultSnapshot.VerifyHealthy(string, CheckResult, string)"/> and shares
 /// NoOperationInProgress.IsHealthy.verified.txt.
 /// </summary>
 public sealed class NoOperationInProgressTests

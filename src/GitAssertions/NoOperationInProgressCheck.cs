@@ -7,8 +7,8 @@ namespace GitAssertions;
 /// is stopped halfway, which <c>git status</c> reports as "You have unmerged paths" or "rebase in progress". It reads
 /// what libgit2 reports as the current operation, which Git keeps in state files such as <c>MERGE_HEAD</c> and
 /// <c>rebase-merge/</c> until the operation is finished or aborted. The failure lists no file: the operation belongs to
-/// the repository, not to a path. It reads an open repository, so <see cref="GitAssert"/> can run it on a repository it
-/// opens for this check alone, and a later RunAll on one it opens once for every check.
+/// the repository, not to a path. It reads an open repository: <see cref="GitAssert"/> opens one for this check alone,
+/// also when <see cref="GitAssert.RunAll"/> calls it, and closes it when the check returns.
 /// </summary>
 internal static class NoOperationInProgressCheck
 {

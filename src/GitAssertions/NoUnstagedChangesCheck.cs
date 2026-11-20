@@ -6,8 +6,8 @@ namespace GitAssertions;
 
 /// <summary>
 /// The NoUnstagedChanges check (docs/specification.md, Checks): fails for every tracked file whose working-tree copy
-/// differs from the index, edited or deleted. It reads an open repository, so <see cref="GitAssert"/> can run it on a
-/// repository it opens for this check alone, and a later RunAll on one it opens once for every check.
+/// differs from the index, edited or deleted. It reads an open repository: <see cref="GitAssert"/> opens one for this
+/// check alone, also when <see cref="GitAssert.RunAll"/> calls it, and closes it when the check returns.
 /// </summary>
 internal static class NoUnstagedChangesCheck
 {
@@ -56,7 +56,8 @@ internal static class NoUnstagedChangesCheck
     }
 
     /// <summary>
-    /// A new instance per read: <see cref="StatusOptions"/> is mutable, and checks run in parallel.
+    /// A new instance per read: <see cref="StatusOptions"/> is mutable, and one <see cref="GitAssert"/> may be shared
+    /// by tests that run in parallel, so no two reads may use the same instance.
     /// </summary>
     private static StatusOptions CreateStatusOptions()
     {

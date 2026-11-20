@@ -8,8 +8,8 @@ namespace GitAssertions;
 /// The NoConflicts check (docs/specification.md, Checks): fails for every file that still has conflicting versions in
 /// the index, which <c>git ls-files -u</c> lists and <c>git status</c> shows as unmerged. It reads the index alone,
 /// not the working tree: a file counts as resolved once <c>git add</c> has replaced its versions with one entry,
-/// whatever the file on disk holds. It reads an open repository, so <see cref="GitAssert"/> can run it on a repository
-/// it opens for this check alone, and a later RunAll on one it opens once for every check.
+/// whatever the file on disk holds. It reads an open repository: <see cref="GitAssert"/> opens one for this check
+/// alone, also when <see cref="GitAssert.RunAll"/> calls it, and closes it when the check returns.
 /// </summary>
 internal static class NoConflictsCheck
 {

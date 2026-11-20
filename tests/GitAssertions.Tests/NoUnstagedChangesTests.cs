@@ -8,8 +8,9 @@ namespace GitAssertions.Tests;
 /// and then changed again included; untracked and staged changes do not, and neither do the line-ending and
 /// file-mode differences git status leaves out. Every test is a snapshot test with no other assertion: a reviewed
 /// <c>.verified.txt</c> file beside this class holds the whole result, rule, health, files, and message. A failing
-/// scenario ends in <see cref="CheckResultSnapshot.Verify"/> and has a file of its own; every healthy one ends in
-/// <see cref="CheckResultSnapshot.VerifyHealthy"/> and shares NoUnstagedChanges.IsHealthy.verified.txt.
+/// scenario ends in <see cref="CheckResultSnapshot.Verify(CheckResult, string)"/> and has a file of its own; every
+/// healthy one ends in <see cref="CheckResultSnapshot.VerifyHealthy(string, CheckResult, string)"/> and shares
+/// NoUnstagedChanges.IsHealthy.verified.txt.
 /// </summary>
 public sealed class NoUnstagedChangesTests
 {

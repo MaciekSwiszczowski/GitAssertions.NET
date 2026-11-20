@@ -18,6 +18,9 @@ GitAssert git = GitAssert.Open(repoPath);   // the folder that contains .git
 
 CheckResult result = git.NoUntrackedFiles();
 Assert.True(result.IsHealthy, result.Message);
+
+RunAllResult all = git.RunAll();            // every check below, in one call
+Assert.True(all.IsHealthy, all.Message);
 ```
 
 `GitAssert` keeps only the path, so there is nothing to dispose, and one instance can be shared between tests. Each check opens the repository, reads it, and closes it before it returns.
@@ -32,7 +35,13 @@ Assert.True(result.IsHealthy, result.Message);
 | `NoOperationInProgress` | a merge, rebase, cherry-pick, or revert is stopped halfway, usually on a conflict, and was neither finished with `--continue` nor given up with `--abort`. The message names the operation and both commands, and lists no file. Any other operation libgit2 reports, such as a bisect, gets a generic message that names it as libgit2 does and points to `git status`. | a repository with no operation in progress |
 | `NoTrackedIgnoredFiles` | a tracked file matches an ignore rule from a `.gitignore` file, `.git/info/exclude`, or `core.excludesFile`: a rule hides only untracked files, so a file committed before its rule, or forced in with `git add -f`, stays tracked. A folder that is itself ignored, with every tracked file in it ignored, such as `bin/`, is one entry with its file count; any other file is listed on its own. | untracked ignored files, tracked files no rule matches, files a `!` rule brings back |
 
-`RunAll`, which runs every check at once, follows in Phase 4 of [docs/tasks.md](docs/tasks.md).
+`RunAll()` runs the five checks above one after another and returns a `RunAllResult`:
+
+- `Results`: one `CheckResult` per check, healthy ones included, in the order of the table.
+- `Failures`: the results that failed. `IsHealthy` is true only when there are none.
+- `Message`: `All Git checks passed.`, or `<f> of 5 Git checks failed.` followed by each failing check's own message, unchanged, so one run names every broken rule.
+
+A failing check does not stop `RunAll`. A check that throws does: `RunAll` throws that check's exception, and the checks after it do not run, because a repository one check cannot read usually fails the others too. Each check opens and closes the repository itself, also when `RunAll` calls it.
 
 `NoUnstagedChanges` reads line endings and the executable bit as `git status` does, from the `core.autocrlf` and `core.filemode` settings:
 

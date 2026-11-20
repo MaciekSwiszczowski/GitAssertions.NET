@@ -15,8 +15,8 @@ namespace GitAssertions;
 /// A folder that is itself ignored and holds no tracked file the check does not report, such as <c>bin/</c>, is one
 /// entry, with its file count, and the fix command removes the folder recursively. A folder is never grouped when that
 /// would untrack a file the message did not list (<c>bin/*</c> with <c>!bin/keep.txt</c>: the folder is not ignored,
-/// only what is inside it). It reads an open repository, so <see cref="GitAssert"/> can run it on a repository it
-/// opens for this check alone, and a later RunAll on one it opens once for every check.
+/// only what is inside it). It reads an open repository: <see cref="GitAssert"/> opens one for this check alone, also
+/// when <see cref="GitAssert.RunAll"/> calls it, and closes it when the check returns.
 /// </para>
 /// </summary>
 internal static class NoTrackedIgnoredFilesCheck

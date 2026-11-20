@@ -97,4 +97,18 @@ public sealed class ThisRepositoryTests
         // Assert
         return CheckResultSnapshot.VerifyHealthy(nameof(GitAssert.NoTrackedIgnoredFiles), result);
     }
+
+    // Trigger: An agent working on this repository leaves it in a state that any one of the checks reports.
+    // Behavior: The suite fails, and the failure names every broken rule at once, each with its files and fix commands.
+    // Assertion: The shared healthy snapshot: five healthy results, no failures, and the message
+    //            "All Git checks passed.". On a failure, the received file holds the whole result.
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
+    public Task RunAll_ThisRepository_IsHealthy()
+    {
+        // Act
+        RunAllResult result = GitAssert.Open(RepositoryRoot).RunAll();
+
+        // Assert
+        return CheckResultSnapshot.VerifyHealthy(nameof(GitAssert.RunAll), result);
+    }
 }

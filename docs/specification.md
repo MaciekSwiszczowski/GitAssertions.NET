@@ -10,7 +10,7 @@ The library is **read-only**. It inspects the repository and reports what it fin
 
 Version 1 is a two-day build done with agents. Everything else comes later, in the phases after it in [tasks.md](tasks.md): integration tests with real Git, accurate messages, security, release preparation, and nice-to-have features.
 
-- **Version 1:** NoUntrackedFiles, NoUnstagedChanges, NoConflicts, NoOperationInProgress, NoTrackedIgnoredFiles, and a plain RunAll with no options (every v1 check always runs). Unit tests use LibGit2Sharp only, so every v1 scenario is set up in-process.
+- **Version 1:** NoUntrackedFiles, NoUnstagedChanges, NoConflicts, NoOperationInProgress, NoTrackedIgnoredFiles, and a plain RunAll with no options (no check can be turned off). Unit tests use LibGit2Sharp only, so every v1 scenario is set up in-process.
 - **Later:** a name of its own in NoOperationInProgress for each rarer operation (a cherry-pick or revert of several commits, bisect, `git am`), a `typechange` entry kind for NoUnstagedChanges (a tracked file replaced by another type, such as a symlink), an intent-to-add kind for NoUnstagedChanges (a file recorded with `git add -N`, which gets `git add` and no discard line), NoMixedStaging (a narrower check than NoUnstagedChanges, which also reports a file changed again after it was staged; its own method, left out of the default `RunAll` so no file prints twice), NotDetachedHead, OnExpectedBranch, NoStaleIndexLock, configuration (enabling and disabling checks, allow-lists, expected branch), the CliWrap real-Git integration tests, and NuGet packaging. Use a project reference until then.
 
 Test scenarios that depend on a later feature (allow-listed paths, disabled checks, verification against the real git CLI) are marked *(later)* below and are not part of v1.
@@ -35,7 +35,7 @@ Test scenarios that depend on a later feature (allow-listed paths, disabled chec
 
 ## Public API (sketch)
 
-- `GitAssert.Open(string repoPath)` checks that the path is a repository root and returns a `GitAssert` that keeps the path. It holds no `Repository` handle: each check opens the repository, reads it, and disposes it before returning (`RunAll` opens it once for all checks). So `GitAssert` is not disposable, an instance may be stored and shared between tests running in parallel, and the repository folder can be deleted as soon as a check returns.
+- `GitAssert.Open(string repoPath)` checks that the path is a repository root and returns a `GitAssert` that keeps the path. It holds no `Repository` handle: each check opens the repository, reads it, and disposes it before returning, also when `RunAll` calls it. So `GitAssert` is not disposable, an instance may be stored and shared between tests running in parallel, and the repository folder can be deleted as soon as a check returns.
 - `Open` throws `ArgumentException` for a path that is not a repository root, and for a bare repository, which has no working tree for the checks to read.
 - No LibGit2Sharp type reaches the caller, exceptions included: a LibGit2Sharp exception from `Open` or a check is re-thrown as `InvalidOperationException` with the same message and no inner exception.
 - Each check returns a `CheckResult` with `Rule` (the check's name, e.g. `NoUntrackedFiles`), `IsHealthy`, a short `Message`, and the list of `Files`. `Files` holds every offending path, sorted ordinally and never truncated; a healthy result has an empty `Files` list.
@@ -47,11 +47,12 @@ Test scenarios that depend on a later feature (allow-listed paths, disabled chec
   Assert.True(result.IsHealthy, result.Message);
   ```
 
-- `git.RunAll()` runs every v1 check and returns a `RunAllResult`:
+- `git.RunAll()` runs every v1 check, one after another, each exactly as if it were called on its own, and returns a `RunAllResult`:
   - `Results`: one `CheckResult` per check, in a fixed order (the order of the Checks list below), healthy ones included.
   - `Failures`: the entries of `Results` where `IsHealthy` is false.
   - `IsHealthy`: true only when every check is healthy.
   - `Message`: as defined under [RunAll message](#runall-message); two broken rules produce two message blocks.
+- A failing check does not stop `RunAll`: the checks after it still run. A check that throws does: `RunAll` throws the same exception, and the checks after it do not run. Stopping is deliberate: a repository that one check cannot read usually fails the others too, so going on would only repeat the error, and each check could first spend its own time failing, which on a large or broken working tree is slow.
 - Later: `git.RunAll(options)` adds options that disable checks, set allow-lists and the expected branch.
 
 ## Checks
@@ -69,7 +70,7 @@ Each check's "Fix" below is the suggestion printed in its failure message, not s
 3. **NoMixedStaging** *(later)*: no file both staged and changed again. Narrower than NoUnstagedChanges, which reports these files too, and the only check for someone who keeps other unstaged edits on purpose. Called on its own, not part of the default `RunAll`.
    - Fix: `git add <file>` to stage the latest version, then commit.
    - Tests: staged-only file passes this check; unstaged-only file passes this check; staged then edited again fails; staged then deleted from disk fails.
-4. **NoConflicts**: no conflicted entries. Detect with `repo.Index.Conflicts`: the paths that still hold conflict stages in the index, as `git ls-files -u` lists them. The check reads the index only, so a file staged with conflict markers left in it passes (D11 in docs/review-findings.md).
+4. **NoConflicts**: no conflicted entries. Detect with `repo.Index.Conflicts`: the paths that still hold conflict stages in the index, as `git ls-files -u` lists them. The check reads the index only, so a file staged with conflict markers left in it passes.
    - Fix: resolve the conflicts in the file, then `git add <file>`, which also stages a deletion when the resolution was to delete it; then finish the operation (see NoOperationInProgress).
    - Tests: clean repo passes; repository with no commits passes; merge of two branches editing the same line fails and lists the file; conflict resolved and staged passes; delete/modify conflict fails; add/add conflict (both branches created the same file) fails; binary-file conflict fails.
 5. **NoOperationInProgress**: no unfinished merge, rebase, cherry-pick or revert. Detect with `repo.Info.CurrentOperation`.
@@ -85,17 +86,18 @@ Each check's "Fix" below is the suggestion printed in its failure message, not s
    - Fix: `git switch <expected-branch>`.
    - Tests: matching branch passes; other branch fails and shows both names; not configured means the check is skipped; detached HEAD fails with a clear message.
 9. **NoTrackedIgnoredFiles**: no tracked files that match ignore rules. Detect with `repo.Ignore.IsPathIgnored` on tracked paths. The check reads every ignore source that `git ls-files -i -c --exclude-standard` reads: the repository's `.gitignore` files, `.git/info/exclude`, and the file named by `core.excludesFile`.
-   - Fix: `git rm --cached <file>` (the file stays on disk), then commit. No line offers to keep a file tracked by changing the ignore rules: the right edit depends on which rule matched, which libgit2 does not report (F10 in docs/review-findings.md).
+   - Fix: `git rm --cached <file>` (the file stays on disk), then commit. No line offers to keep a file tracked by changing the ignore rules: the right edit depends on which rule matched, which libgit2 does not report.
    - Tests: tracked file not ignored passes; file committed before the ignore rule was added fails; file force-added with `git add -f` fails; bin/ and obj/ folder content fails and is grouped by folder; negated rule (`!keep.txt`) passes; with `bin/*` and `!bin/keep.txt`, a tracked `bin/keep.txt` passes and a tracked `bin/app.dll` fails as an entry of its own, not grouped, because the folder itself is not ignored.
 
-Cross-cutting tests: `RunAll` reports every failing check at once (two broken rules give two `Failures` and two message blocks in `Message`); a clean repo makes `RunAll` healthy; disabled checks are skipped *(later)*; no repo handle outlives a check (the temp folder can be deleted on Windows right after a check, with nothing disposed); a path that isn't a repository throws a clear error.
+Cross-cutting tests: `RunAll` reports every failing check at once (two broken rules give two `Failures` and two message blocks in `Message`, and the checks after them still run); a clean repo makes `RunAll` healthy; `RunAll` does not repeat each check's own scenarios; disabled checks are skipped *(later)*; no repo handle outlives a check (the temp folder can be deleted on Windows right after a check, with nothing disposed); a path that isn't a repository throws a clear error.
 
 ## Test tooling
 
 - Unit tests (v1) use LibGit2Sharp to set up scenarios: in-process, fast, and no git processes to clean up. They cut libgit2 off from the machine's and the user's git config, so a scenario gives the same result on every machine.
-- `ThisRepositoryTests` runs every check on this repository itself. It lives in a test project of its own, `GitAssertions.ThisRepository.Tests`, which does not cut libgit2 off from git config: libgit2 settings are process-wide, and a real repository has to be read as `git status` reads it, as a user's own test project reads theirs.
+- Both test projects run every test in parallel, the tests of one class included (xUnit's parallel mode `all`), so the suite itself exercises a `GitAssert` shared between parallel tests. A test that changes process-wide state, such as the current directory, runs alone.
+- `ThisRepositoryTests` runs every check, and `RunAll`, on this repository itself. It lives in a test project of its own, `GitAssertions.ThisRepository.Tests`, which does not cut libgit2 off from git config: libgit2 settings are process-wide, and a real repository has to be read as `git status` reads it, as a user's own test project reads theirs.
 - Later (Phase 5 in tasks.md): a small set of integration tests creates the tricky scenarios with the real git CLI, so libgit2 is checked against real Git: autocrlf / line endings, `git add -f`, files committed before an ignore rule, and a merge or rebase left in progress. A stale index.lock is tested the same way, with the NoStaleIndexLock check. The integration tests also set up the states libgit2 cannot create at all, such as bisect, a cherry-pick or revert of several commits, and an interactive rebase; those scenarios are tested with real Git only, never by writing Git's state files by hand.
-- The CLI tests run git through CliWrap, with a timeout and cancellation so no process is left running. They're tagged as integration tests and skipped when git isn't on PATH.
+- The CLI tests run git through CliWrap, with a timeout that kills git's whole process tree, so no process is left running. Git is cut off from the machine's and the user's config, as libgit2 is in the unit tests. The tests are tagged as integration tests and run on CI with the others, on every platform CI runs. A missing git, or one older than 2.32, fails them instead of skipping them, so they cannot drop out unnoticed.
 
 ### Platforms
 

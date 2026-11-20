@@ -9,8 +9,9 @@ namespace GitAssertions.Tests;
 /// as one entry; a file a rule does not match, an ignored file nobody tracks, and a file a <c>!</c> rule brings back
 /// pass. Every test is a snapshot test with no other assertion: a reviewed <c>.verified.txt</c> file beside this class
 /// holds the whole result, rule, health, files, and message. A failing scenario ends in
-/// <see cref="CheckResultSnapshot.Verify"/> and has a file of its own; every healthy one ends in
-/// <see cref="CheckResultSnapshot.VerifyHealthy"/> and shares NoTrackedIgnoredFiles.IsHealthy.verified.txt.
+/// <see cref="CheckResultSnapshot.Verify(CheckResult, string)"/> and has a file of its own; every healthy one ends in
+/// <see cref="CheckResultSnapshot.VerifyHealthy(string, CheckResult, string)"/> and shares
+/// NoTrackedIgnoredFiles.IsHealthy.verified.txt.
 /// </summary>
 public sealed class NoTrackedIgnoredFilesTests
 {
