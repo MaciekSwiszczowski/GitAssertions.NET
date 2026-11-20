@@ -4,7 +4,7 @@ namespace GitAssertions.Tests.Infrastructure;
 
 /// <summary>
 /// Pins the scenario helpers of <see cref="TempRepo"/> (<c>AddFile</c>, <c>Stage</c>, <c>Commit</c>, <c>Delete</c>,
-/// <c>StageAsExecutable</c>, <c>CreateBranch</c>, <c>Checkout</c>, <c>Diverge</c>, <c>Merge</c>, <c>Rebase</c>,
+/// <c>StageAsExecutable</c>, <c>StageForced</c>, <c>CreateBranch</c>, <c>Checkout</c>, <c>Diverge</c>, <c>Merge</c>, <c>Rebase</c>,
 /// <c>CherryPick</c>, <c>Revert</c>, <c>AddGitIgnore</c>): each one must leave the repository in the state its name
 /// says, because every later test sets up its own scenario with them and trusts the result.
 /// </summary>
@@ -157,6 +157,28 @@ public sealed class TempRepoScenarioTests
 
         // Assert
         repo.Repo.Index["build.sh"].ShouldNotBeNull().Mode.ShouldBe(Mode.ExecutableFile);
+    }
+
+    // Trigger: A test author stages a file that an ignore rule matches, once with Stage and once with StageForced.
+    // Behavior: Stage leaves the ignored file out, as `git add` does; StageForced puts it in the index, as
+    //           `git add -f` does.
+    // Assertion: After Stage the path's status reads Ignored; after StageForced it reads NewInIndex.
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
+    public void StageForced_IgnoredFile_IsNewInIndexWhereStageLeavesItOut()
+    {
+        // Arrange
+        // An ignored file is skipped by `git add` and added by `git add -f`: https://git-scm.com/docs/git-add
+        using TempRepo repo = TempRepo.Create();
+        repo.AddGitIgnore("*.log").AddFile("debug.log");
+
+        // Act
+        repo.Stage("debug.log");
+        FileStatus afterStage = repo.Repo.RetrieveStatus("debug.log");
+        repo.StageForced("debug.log");
+
+        // Assert
+        afterStage.ShouldBe(FileStatus.Ignored);
+        repo.Repo.RetrieveStatus("debug.log").ShouldBe(FileStatus.NewInIndex);
     }
 
     // Trigger: A test author creates a branch and does not check it out.

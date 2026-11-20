@@ -1,0 +1,9 @@
+﻿Rule: NoTrackedIgnoredFiles
+IsHealthy: False
+Files (1):
+  bin/app.dll
+Message:
+NoTrackedIgnoredFiles: 1 tracked path matches ignore rules.
+  bin/app.dll
+Fix (the files stay on disk), then commit:
+  git rm -r --cached -- bin/app.dll

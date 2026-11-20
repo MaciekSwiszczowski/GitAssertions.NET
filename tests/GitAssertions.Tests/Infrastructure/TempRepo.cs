@@ -184,6 +184,16 @@ internal sealed class TempRepo : IDisposable
         return this;
     }
 
+    /// <summary>
+    /// Stages the paths even when an ignore rule matches them, like <c>git add -f</c>. <see cref="Stage"/> leaves an
+    /// ignored file out, as <c>git add</c> does.
+    /// </summary>
+    public TempRepo StageForced(params string[] paths)
+    {
+        Commands.Stage(Repo, paths, new StageOptions { IncludeIgnored = true });
+        return this;
+    }
+
     /// <summary>Creates a branch at <c>HEAD</c> without checking it out.</summary>
     public TempRepo CreateBranch(string name)
     {

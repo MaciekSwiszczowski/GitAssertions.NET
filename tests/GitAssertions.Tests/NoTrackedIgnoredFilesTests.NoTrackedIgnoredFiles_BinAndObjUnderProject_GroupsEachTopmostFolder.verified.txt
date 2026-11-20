@@ -1,0 +1,12 @@
+﻿Rule: NoTrackedIgnoredFiles
+IsHealthy: False
+Files (3):
+  src/App/bin/Debug/app.dll
+  src/App/bin/Debug/app.pdb
+  src/App/obj/project.assets.json
+Message:
+NoTrackedIgnoredFiles: 2 tracked paths match ignore rules.
+  src/App/bin/ (2 files)
+  src/App/obj/ (1 file)
+Fix (the files stay on disk), then commit:
+  git rm -r --cached -- src/App/bin/ src/App/obj/

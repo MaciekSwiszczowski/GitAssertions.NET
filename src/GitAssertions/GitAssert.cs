@@ -121,6 +121,22 @@ public sealed class GitAssert
     }
 
     /// <summary>
+    /// Checks that no file Git tracks matches an ignore rule. A rule hides only files Git does not track, so a file
+    /// committed before its rule was added, or forced in with <c>git add -f</c>, stays tracked and keeps showing up in
+    /// every diff. The rules are those <c>git ls-files -i -c --exclude-standard</c> reads: the repository's
+    /// <c>.gitignore</c> files, <c>.git/info/exclude</c>, and the file <c>core.excludesFile</c> names. A file that a
+    /// <c>!</c> rule brings back passes. A folder that is itself ignored, with every tracked file in it ignored, such as
+    /// <c>bin/</c>, is listed as one entry with its file count; any other file is listed on its own.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// The repository cannot be read, for example because its folder was deleted after <see cref="Open"/>.
+    /// </exception>
+    public CheckResult NoTrackedIgnoredFiles()
+    {
+        return Read(NoTrackedIgnoredFilesCheck.Run);
+    }
+
+    /// <summary>
     /// Opens the repository, runs <paramref name="read"/> on it, and closes it before returning. Every check reads
     /// through here, so no handle outlives a call. The repository is closed once <paramref name="read"/> returns, so
     /// it must return finished data (a list, a count), never a lazy query over the repository.

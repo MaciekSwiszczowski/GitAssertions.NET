@@ -1,0 +1,5 @@
+﻿Rule: NoTrackedIgnoredFiles
+IsHealthy: True
+Files (0):
+Message:
+NoTrackedIgnoredFiles: OK.

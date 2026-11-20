@@ -82,4 +82,19 @@ public sealed class ThisRepositoryTests
         // Assert
         return CheckResultSnapshot.VerifyHealthy(nameof(GitAssert.NoOperationInProgress), result);
     }
+
+    // Trigger: An agent working on this repository commits or stages a file that a .gitignore rule, .git/info/exclude,
+    //          or the machine's global ignore file matches, such as build output or a snapshot's .received.txt.
+    // Behavior: The suite fails, and the failure names the file, or the folder, and the command that untracks it.
+    // Assertion: The shared healthy snapshot: a healthy result with no files. On a failure, the received file holds
+    //            the check's whole result.
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
+    public Task NoTrackedIgnoredFiles_ThisRepository_IsHealthy()
+    {
+        // Act
+        CheckResult result = GitAssert.Open(RepositoryRoot).NoTrackedIgnoredFiles();
+
+        // Assert
+        return CheckResultSnapshot.VerifyHealthy(nameof(GitAssert.NoTrackedIgnoredFiles), result);
+    }
 }

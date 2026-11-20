@@ -66,7 +66,7 @@ internal static class FailureMessage
 
     private static string EntryLine(FailureEntry entry)
     {
-        string paths = string.Join(" -> ", entry.Paths);
+        string paths = entry.Label ?? string.Join(" -> ", entry.Paths);
         return entry.Kind is null ? paths : $"{entry.Kind}: {paths}";
     }
 

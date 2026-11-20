@@ -30,8 +30,9 @@ Assert.True(result.IsHealthy, result.Message);
 | `NoUnstagedChanges` | a tracked file differs from the index: it was edited or deleted and the change is not staged. A file moved without `git mv` is listed as its old path, deleted; its new path is untracked. | untracked files, staged changes, line endings and the executable bit where Git ignores them (see below) |
 | `NoConflicts` | a file still has an unresolved conflict from a merge, pull, rebase, cherry-pick, revert, or stash pop: Git keeps its conflicting versions, and refuses to commit, until the file is resolved and staged with `git add`. Binary files and files one side deleted are included, although they hold no conflict markers. | conflicts resolved and staged, even when conflict markers were left in the file (see below) |
 | `NoOperationInProgress` | a merge, rebase, cherry-pick, or revert is stopped halfway, usually on a conflict, and was neither finished with `--continue` nor given up with `--abort`. The message names the operation and both commands, and lists no file. Any other operation libgit2 reports, such as a bisect, gets a generic message that names it as libgit2 does and points to `git status`. | a repository with no operation in progress |
+| `NoTrackedIgnoredFiles` | a tracked file matches an ignore rule from a `.gitignore` file, `.git/info/exclude`, or `core.excludesFile`: a rule hides only untracked files, so a file committed before its rule, or forced in with `git add -f`, stays tracked. A folder that is itself ignored, with every tracked file in it ignored, such as `bin/`, is one entry with its file count; any other file is listed on its own. | untracked ignored files, tracked files no rule matches, files a `!` rule brings back |
 
-The other v1 checks are added one by one; see Phase 3 in [docs/tasks.md](docs/tasks.md).
+`RunAll`, which runs every check at once, follows in Phase 4 of [docs/tasks.md](docs/tasks.md).
 
 `NoUnstagedChanges` reads line endings and the executable bit as `git status` does, from the `core.autocrlf` and `core.filemode` settings:
 
