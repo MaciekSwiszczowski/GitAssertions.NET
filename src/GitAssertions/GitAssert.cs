@@ -92,6 +92,20 @@ public sealed class GitAssert
     }
 
     /// <summary>
+    /// Checks that no file has an unresolved conflict: a merge, pull, rebase, cherry-pick, revert, or stash pop that
+    /// stopped on a conflict leaves the file's conflicting versions in the index until it is resolved and staged with
+    /// <c>git add</c>, and until then Git refuses to commit. A file staged with conflict markers still in it passes,
+    /// because Git no longer counts it as conflicted.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// The repository cannot be read, for example because its folder was deleted after <see cref="Open"/>.
+    /// </exception>
+    public CheckResult NoConflicts()
+    {
+        return Read(NoConflictsCheck.Run);
+    }
+
+    /// <summary>
     /// Opens the repository, runs <paramref name="read"/> on it, and closes it before returning. Every check reads
     /// through here, so no handle outlives a call. The repository is closed once <paramref name="read"/> returns, so
     /// it must return finished data (a list, a count), never a lazy query over the repository.

@@ -65,6 +65,22 @@ public sealed class TempRepoTests
         repo.Repo.Head.FriendlyName.ShouldBe("main");
     }
 
+    // Trigger: A test author needs a repository in which nothing has been committed yet, as right after git init.
+    // Behavior: The repository has no commits, and HEAD names main, a branch that does not exist until the first
+    //           commit.
+    // Assertion: HEAD reads unborn and points at refs/heads/main, and history is empty.
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
+    public void CreateUnborn_HasNoCommitsAndHeadNamesMain()
+    {
+        // Act
+        using TempRepo repo = TempRepo.CreateUnborn();
+
+        // Assert
+        repo.Repo.Info.IsHeadUnborn.ShouldBeTrue();
+        repo.Repo.Refs.Head.TargetIdentifier.ShouldBe("refs/heads/main");
+        repo.Repo.Commits.ShouldBeEmpty();
+    }
+
     // Trigger: A test author creates a TempRepo and touches nothing.
     // Behavior: The working tree is clean, so whatever a test changes next is the only change in the status.
     // Assertion: The status lists no file at all.

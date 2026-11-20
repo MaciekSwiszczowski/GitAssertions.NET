@@ -1,0 +1,11 @@
+﻿Rule: NoConflicts
+IsHealthy: False
+Files (2):
+  readme.txt
+  src/Program.cs
+Message:
+NoConflicts: 2 files have unresolved conflicts.
+  conflicted: readme.txt
+  conflicted: src/Program.cs
+Fix: resolve the conflicts in each file, then run:
+  git add -- readme.txt src/Program.cs

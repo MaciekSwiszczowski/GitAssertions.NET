@@ -1,0 +1,5 @@
+﻿Rule: NoConflicts
+IsHealthy: True
+Files (0):
+Message:
+NoConflicts: OK.

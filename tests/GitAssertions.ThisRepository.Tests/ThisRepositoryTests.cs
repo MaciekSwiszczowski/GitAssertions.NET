@@ -52,4 +52,19 @@ public sealed class ThisRepositoryTests
         // Assert
         return CheckResultSnapshot.VerifyHealthy(nameof(GitAssert.NoUnstagedChanges), result);
     }
+
+    // Trigger: An agent working on this repository is handed a merge, pull, or rebase that stopped on a conflict, and
+    //          leaves a conflicted file unresolved or resolved but not staged.
+    // Behavior: The suite fails, and the failure names the file and the command that stages it once resolved.
+    // Assertion: The shared healthy snapshot: a healthy result with no files. On a failure, the received file holds
+    //            the check's whole result.
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
+    public Task NoConflicts_ThisRepository_IsHealthy()
+    {
+        // Act
+        CheckResult result = GitAssert.Open(RepositoryRoot).NoConflicts();
+
+        // Assert
+        return CheckResultSnapshot.VerifyHealthy(nameof(GitAssert.NoConflicts), result);
+    }
 }

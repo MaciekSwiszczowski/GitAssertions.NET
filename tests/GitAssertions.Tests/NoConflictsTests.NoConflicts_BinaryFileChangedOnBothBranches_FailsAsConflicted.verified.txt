@@ -1,0 +1,9 @@
+﻿Rule: NoConflicts
+IsHealthy: False
+Files (1):
+  data.bin
+Message:
+NoConflicts: 1 file has unresolved conflicts.
+  conflicted: data.bin
+Fix: resolve the conflicts in each file, then run:
+  git add -- data.bin

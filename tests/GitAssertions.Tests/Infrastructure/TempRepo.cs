@@ -36,6 +36,25 @@ internal sealed class TempRepo : IDisposable
     /// </summary>
     public static TempRepo Create()
     {
+        TempRepo repo = CreateUnborn();
+        try
+        {
+            return repo.AddFile(InitialFile, "initial\n").Stage(InitialFile).Commit("Initial commit");
+        }
+        catch
+        {
+            repo.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Creates the folder and a repository with no commits, as <c>git init</c> leaves it: HEAD names
+    /// <see cref="MainBranch"/>, which does not exist until the first commit. If a step throws, whatever was already
+    /// made is released and deleted before the exception goes on.
+    /// </summary>
+    public static TempRepo CreateUnborn()
+    {
         TemporaryDirectory directory = TemporaryDirectory.Create();
         Repository? repository = null;
         try
@@ -47,10 +66,7 @@ internal sealed class TempRepo : IDisposable
             // The first branch is named after init.defaultBranch, which differs from machine to machine.
             repository.Refs.UpdateTarget("HEAD", "refs/heads/" + MainBranch);
 
-            return new TempRepo(directory, repository)
-                .AddFile(InitialFile, "initial\n")
-                .Stage(InitialFile)
-                .Commit("Initial commit");
+            return new TempRepo(directory, repository);
         }
         catch
         {
@@ -81,9 +97,19 @@ internal sealed class TempRepo : IDisposable
     /// </summary>
     public TempRepo Commit(string message = "Commit")
     {
-        DateTimeOffset when = FixtureEpoch.AddMinutes(_commitCount++);
-        Signature signature = new("GitAssertions Tests", "tests@gitassertions.invalid", when);
+        Signature signature = NextSignature();
         Repo.Commit(message, signature, signature);
+        return this;
+    }
+
+    /// <summary>
+    /// Merges <paramref name="branch"/> into the checked-out branch, like <c>git merge</c>. A conflict does not throw:
+    /// the merge stops as <c>git merge</c> stops, with the conflicted files left in the index and on disk and the merge
+    /// in progress, which is the state the conflict and operation checks read.
+    /// </summary>
+    public TempRepo Merge(string branch)
+    {
+        Repo.Merge(Repo.Branches[branch], NextSignature());
         return this;
     }
 
@@ -125,6 +151,16 @@ internal sealed class TempRepo : IDisposable
         File.AppendAllText(_directory.GetFullPath(".gitignore"),
             string.Concat(patterns.Select(static pattern => pattern + Environment.NewLine)));
         return this;
+    }
+
+    /// <summary>
+    /// The author and committer of the next commit, stamped from a fixed UTC base one minute after the one before, so a
+    /// scenario builds the same history on any machine in any month.
+    /// </summary>
+    private Signature NextSignature()
+    {
+        DateTimeOffset when = FixtureEpoch.AddMinutes(_commitCount++);
+        return new Signature("GitAssertions Tests", "tests@gitassertions.invalid", when);
     }
 
     /// <summary>Releases the repository handle first, because an open handle can lock files under .git.</summary>

@@ -2,6 +2,8 @@
 
 Version 1 is a two-day build done with agents: an empty GitHub repo with CI, then five checks and RunAll. Tasks are INVEST (Independent, Negotiable, Valuable, Estimable, Small, Testable), and each feature goes red, green, refactor: failing tests from the spec first, then the simplest code that passes, then cleanup. Phase two items at the end get picked up only when they're needed.
 
+Releases (D1 in docs/review-findings.md): 0.1 is the five checks and RunAll, Phases 3 and 4. A task marked *(release 0.2)* or *(release 1.0)* waits until 0.1 is done, even where its phase comes first, and a phase-two item with a mark is needed for that release.
+
 ## Definition of done
 
 **Behavior tasks** (Phases 1 to 4, and any task that adds or changes library or test-helper behavior):
@@ -28,15 +30,15 @@ Version 1 is a two-day build done with agents: an empty GitHub repo with CI, the
 
 - [x] **T2.1 GitAssert.Open.** Checks that a path is a repository root and keeps the path. `GitAssert` holds no `Repository` handle: every read opens the repository and disposes it before returning, so an instance has nothing to dispose and may be stored and shared. Throws a clear error for a path that isn't a repo or is a bare repo, and re-throws LibGit2Sharp exceptions as `InvalidOperationException` with the message only. Tests first: open reads the right repository, a bad path throws, and one instance shared by parallel readers works.
 - [x] **T2.2 CheckResult.** `Rule`, `IsHealthy`, `Message`, `Files`, and a factory for healthy and failing results. Tests first, for the rules every check's message shares: the rule line, entries sorted ordinally, the 20-entry limit, `--` before the paths, `\n` between lines; a path with a space, a non-ASCII letter, or `+ , = @` is double-quoted in commands and a plain path is not; `Files` is sorted, read-only, and keeps every path; a healthy result is `<Rule>: OK.` with no files. What only some checks print (kinds of change, renames, commands without paths, sentence-only fix lines, a failure with no entries) is tested in Phase 3 by the checks that print it, against the spec's example messages.
-- [ ] **T2.3 Shell-safe paths and output limits.** Message formatting follows the spec's Security > Shell-safe paths and Output limits. Tests first:
+- [ ] **T2.3 Shell-safe paths and output limits.** *(release 0.2)* Message formatting follows the spec's Security > Shell-safe paths and Output limits. Tests first:
   - A path with `$(...)`, a backtick, `;`, `&`, `|`, `%`, `"`, `'`, `*`, or a leading `:` is listed as an entry but left out of every command, and appears in the unsafe-path note.
   - Newline, tab, carriage return, ESC, and a bidirectional override in a path are printed escaped (`\n`, `\t`, `\r`, `\u{001B}`, `\u{202E}`), so each entry stays on one line; a literal backslash prints as `\\`.
   - When no listed path is safe, the message has no command lines, only the note.
   - A 300-character path is shortened in entries (first 100 + `...` + last 60) and left out of commands.
   - A message that would exceed 16,000 characters is cut at a full line and ends with `  ...message truncated.`
   - `Files` still holds the raw, untruncated paths.
-- [ ] **T2.4 Hostile-repo safety.** Prove the library never runs anything the repository asks for. Tests first: in a TempRepo with an executable `pre-commit` and `post-checkout` hook and a `.gitattributes` filter driver whose clean/smudge/process commands would create a marker file, opening the repo and running every v1 check never creates the marker. Also assert the library leaves libgit2 owner validation switched on. Add the "never runs hooks, filters, or fsmonitor" statement to the README.
-- [ ] **T2.5 Packfiles.** Independent of Phase 3: the checks may start before it. Research first: how Git stores objects in packfiles (`.git/objects/pack`), which every cloned repository uses, and how libgit2 reads them. Background, measured on 2026-11-18: libgit2 keeps a packfile open once it has read from it, and Windows then refuses to delete it; loose objects are never held open, so a fresh TempRepo cannot show a leaked handle, and no test today proves that a read releases its handle (a `Repository` kept in a field passes them all). Then, tests first: a TempRepo helper that packs the repository's objects, and a test that on a packed repository the folder can be deleted right after a `GitAssert` read, with nothing disposed. A `Repository` kept in a field must turn that test red.
+- [ ] **T2.4 Hostile-repo safety.** *(release 0.2)* Prove the library never runs anything the repository asks for. Tests first: in a TempRepo with an executable `pre-commit` and `post-checkout` hook and a `.gitattributes` filter driver whose clean/smudge/process commands would create a marker file, opening the repo and running every v1 check never creates the marker. Also assert the library leaves libgit2 owner validation switched on. Add the "never runs hooks, filters, or fsmonitor" statement to the README.
+- [ ] **T2.5 Packfiles.** *(release 1.0)* Independent of Phase 3: the checks may start before it. Research first: how Git stores objects in packfiles (`.git/objects/pack`), which every cloned repository uses, and how libgit2 reads them. Background, measured on 2026-11-18: libgit2 keeps a packfile open once it has read from it, and Windows then refuses to delete it; loose objects are never held open, so a fresh TempRepo cannot show a leaked handle, and no test today proves that a read releases its handle (a `Repository` kept in a field passes them all). Then, tests first: a TempRepo helper that packs the repository's objects, and a test that on a packed repository the folder can be deleted right after a `GitAssert` read, with nothing disposed. A `Repository` kept in a field must turn that test red.
 
 ## Phase 3: Version 1 checks (one task each, any order after Phase 2)
 
@@ -44,10 +46,10 @@ Each task: write the spec's v1 test scenarios as failing snapshot tests (skip th
 
 - [x] **T3.1 NoUntrackedFiles**, including nested folders and ignored files.
 - [x] **T3.2 NoUnstagedChanges**, including deletes, files changed again after staging, and the autocrlf and file-mode edge cases.
-- [ ] **T3.4 NoConflicts**, including merge conflicts and delete/modify conflicts. Adds a merge helper to TempRepo.
+- [x] **T3.4 NoConflicts**, including merge, delete/modify, add/add, and binary conflicts. Adds a merge helper to TempRepo.
 - [ ] **T3.5 NoOperationInProgress**, covering merge, rebase, cherry-pick, revert, and the aborted case. Adds rebase, cherry-pick, and revert helpers to TempRepo.
 - [ ] **T3.6 NoTrackedIgnoredFiles**, covering files committed before the ignore rule, force-added files, bin/obj grouping, and negated rules.
-- [ ] **T3.7 Nested repositories (Maciek investigates first).** An untracked folder that is itself a Git repository, such as `vendor/lib/`, is reported by NoUntrackedFiles as one entry, as `git status` shows it, so the check fails, as it should. But the message calls it a file, and its fix commands do not suit it: `git add` records it as an embedded repository instead of adding its files, and `git clean -f` does not delete it (that needs `-ffd`). Investigate how nested repositories (and submodules) behave, then decide the wording and fix commands, and add tests.
+- [ ] **T3.7 Nested repositories (Maciek investigates first).** *(release 1.0)* An untracked folder that is itself a Git repository, such as `vendor/lib/`, is reported by NoUntrackedFiles as one entry, as `git status` shows it, so the check fails, as it should. But the message calls it a file, and its fix commands do not suit it: `git add` records it as an embedded repository instead of adding its files, and `git clean -f` does not delete it (that needs `-ffd`). Investigate how nested repositories (and submodules) behave, then decide the wording and fix commands, and add tests.
 
 ## Phase 4: RunAll
 
@@ -56,7 +58,7 @@ Each task: write the spec's v1 test scenarios as failing snapshot tests (skip th
 ## Phase two (later, when needed)
 
 - [ ] Branch protection on main, requiring CI.
-- [ ] Linux CI leg: run restore, build, and test on `ubuntu-latest` as well as `windows-latest`, before the first public release (1.0; see the spec's Test tooling > Platforms). Fix or skip, with a stated reason, each test that depends on Windows behavior. Proof: a green CI run on both.
+- [ ] *(release 1.0)* Linux CI leg: run restore, build, and test on `ubuntu-latest` as well as `windows-latest`, before the first public release (1.0; see the spec's Test tooling > Platforms). Fix or skip, with a stated reason, each test that depends on Windows behavior. Proof: a green CI run on both.
 - [ ] NoUnstagedChanges: the `typechange` kind (a file replaced by a symlink) and an intent-to-add kind (a file recorded with `git add -N`: `git add` only, no discard line, which needs fix commands that take only some entries' paths). Analysis: D4 and F01 in docs/review-findings.md.
 - [ ] NoMixedStaging check: a narrower check than NoUnstagedChanges, its own method, not in the default `RunAll` (D2 in docs/review-findings.md). Its scenarios (staged then edited or deleted) are already NoUnstagedChanges tests.
 - [ ] NotDetachedHead check, including unborn HEAD.
@@ -64,8 +66,8 @@ Each task: write the spec's v1 test scenarios as failing snapshot tests (skip th
 - [ ] NoStaleIndexLock check.
 - [ ] Options: `RunAll(options)` with per-check on/off, allow-lists, expected branch. Includes the spec's deferred scenarios: allow-listed path passes, disabled checks are skipped.
 - [ ] CliWrap git runner and real-Git integration tests (autocrlf, `git add -f`, files committed before an ignore rule, merge or rebase in progress, index.lock).
-- [ ] NuGet packaging with SourceLink and package signing, plus a usage sample.
-- [ ] Supply chain: package lock files (`RestorePackagesWithLockFile`, locked restore in CI) on top of central package versions, and GitHub Actions pinned to commit SHAs. Proof: CI restores in locked mode and the workflow uses SHA-pinned actions.
-- [ ] Dependabot for NuGet and GitHub Actions, so LibGit2Sharp (libgit2) security updates arrive as PRs. Proof: `.github/dependabot.yml` exists and Dependabot opens its first update check.
+- [ ] *(release 1.0)* NuGet packaging with SourceLink and package signing, plus a usage sample.
+- [ ] *(release 0.2)* Supply chain: package lock files (`RestorePackagesWithLockFile`, locked restore in CI) on top of central package versions, and GitHub Actions pinned to commit SHAs. Proof: CI restores in locked mode and the workflow uses SHA-pinned actions.
+- [ ] *(release 0.2)* Dependabot for NuGet and GitHub Actions, so LibGit2Sharp (libgit2) security updates arrive as PRs. Proof: `.github/dependabot.yml` exists and Dependabot opens its first update check.
 - [x] CI read-only token: set `permissions: contents: read` in every workflow. Proof: a green CI run with the restricted permissions. (Already in the CI workflow from T0.3; keep it in any new workflow.)
 - [ ] Review real repos for new scenarios and add them as new tasks.

@@ -4,9 +4,9 @@ namespace GitAssertions.Tests.Infrastructure;
 
 /// <summary>
 /// Pins the scenario helpers of <see cref="TempRepo"/> (<c>AddFile</c>, <c>Stage</c>, <c>Commit</c>, <c>Delete</c>,
-/// <c>StageAsExecutable</c>, <c>CreateBranch</c>, <c>Checkout</c>, <c>AddGitIgnore</c>): each one must leave the
-/// repository in the state its name says, because every later test sets up its own scenario with them and trusts the
-/// result.
+/// <c>StageAsExecutable</c>, <c>CreateBranch</c>, <c>Checkout</c>, <c>Merge</c>, <c>AddGitIgnore</c>): each one must
+/// leave the repository in the state its name says, because every later test sets up its own scenario with them and
+/// trusts the result.
 /// </summary>
 public sealed class TempRepoScenarioTests
 {
@@ -218,6 +218,37 @@ public sealed class TempRepoScenarioTests
         File.Exists(Path.Combine(repo.Root, "feature.txt")).ShouldBeFalse();
         repo.Repo.RetrieveStatus("feature.txt").ShouldBe(FileStatus.Nonexistent);
         repo.Repo.RetrieveStatus().Select(static entry => entry.FilePath).ShouldBeEmpty();
+    }
+
+    // Trigger: A test author merges a feature branch that edited the same line of readme.txt as the main branch.
+    // Behavior: The merge stops the way git merge stops on a conflict: the file is left conflicted with conflict
+    //           markers written into it, the merge stays in progress, and nothing is committed.
+    // Assertion: readme.txt reads Conflicted and holds a "<<<<<<<" marker, the current operation reads Merge, and HEAD
+    //            is still main's last commit.
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
+    public void Merge_BranchEditedSameLine_LeavesConflictAndMergeInProgress()
+    {
+        // Arrange
+        using TempRepo repo = TempRepo.Create();
+        repo.CreateBranch("feature")
+            .Checkout("feature")
+            .AddFile(TempRepo.InitialFile, "feature\n")
+            .Stage(TempRepo.InitialFile)
+            .Commit("Edit on feature")
+            .Checkout(TempRepo.MainBranch)
+            .AddFile(TempRepo.InitialFile, "main\n")
+            .Stage(TempRepo.InitialFile)
+            .Commit("Edit on main");
+        string mainTip = repo.Repo.Head.Tip.Sha;
+
+        // Act
+        repo.Merge("feature");
+
+        // Assert
+        repo.Repo.RetrieveStatus(TempRepo.InitialFile).ShouldBe(FileStatus.Conflicted);
+        File.ReadAllText(Path.Combine(repo.Root, TempRepo.InitialFile)).ShouldContain("<<<<<<<");
+        repo.Repo.Info.CurrentOperation.ShouldBe(CurrentOperation.Merge);
+        repo.Repo.Head.Tip.Sha.ShouldBe(mainTip);
     }
 
     // Trigger: A test author adds an ignore rule for log files and then adds a log file.

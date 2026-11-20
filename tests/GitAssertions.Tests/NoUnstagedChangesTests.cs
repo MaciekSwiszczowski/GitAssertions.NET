@@ -185,6 +185,36 @@ public sealed class NoUnstagedChangesTests
         await CheckResultSnapshot.Verify(result);
     }
 
+    // Trigger: Merging a feature branch stops on a conflict in readme.txt, and nobody resolves it, so the file on disk
+    //          holds conflict markers.
+    // Behavior: A conflicted file is the conflicts check's business, so this check passes and the file is not listed
+    //           twice when both checks run; git restore would fail on it anyway, because the path is unmerged.
+    // Assertion: The shared healthy snapshot: a healthy result with no files.
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
+    public async Task NoUnstagedChanges_UnresolvedConflict_IsHealthy()
+    {
+        // Arrange
+        // Measured on 2026-11-20 with LibGit2Sharp 0.32.0: the status of a conflicted file reads Conflicted alone, with
+        // no ModifiedInWorkdir, in the work-directory-only status this check reads.
+        using TempRepo repo = TempRepo.Create();
+        repo.CreateBranch("feature")
+            .Checkout("feature")
+            .AddFile(TempRepo.InitialFile, "feature\n")
+            .Stage(TempRepo.InitialFile)
+            .Commit("Edit on feature")
+            .Checkout(TempRepo.MainBranch)
+            .AddFile(TempRepo.InitialFile, "main\n")
+            .Stage(TempRepo.InitialFile)
+            .Commit("Edit on main")
+            .Merge("feature");
+
+        // Act
+        CheckResult result = GitAssert.Open(repo.Root).NoUnstagedChanges();
+
+        // Assert
+        await CheckResultSnapshot.VerifyHealthy(nameof(GitAssert.NoUnstagedChanges), result);
+    }
+
     // Trigger: On Windows with core.autocrlf=true, an agent opens a file Git checked out with CRLF line endings and
     //          saves it unchanged.
     // Behavior: Git compares the file with its CRLF turned back into LF, so it matches the committed file and the

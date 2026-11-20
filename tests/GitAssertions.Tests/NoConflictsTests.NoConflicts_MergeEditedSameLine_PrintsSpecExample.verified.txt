@@ -1,0 +1,9 @@
+﻿Rule: NoConflicts
+IsHealthy: False
+Files (1):
+  src/Program.cs
+Message:
+NoConflicts: 1 file has unresolved conflicts.
+  conflicted: src/Program.cs
+Fix: resolve the conflicts in each file, then run:
+  git add -- src/Program.cs

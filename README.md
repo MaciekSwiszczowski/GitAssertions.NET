@@ -28,6 +28,7 @@ Assert.True(result.IsHealthy, result.Message);
 |---|---|---|
 | `NoUntrackedFiles` | a file in the working tree is neither tracked nor ignored. Every such file is listed by its full path, also inside a new folder. | ignored files, empty folders, edits and deletes of tracked files, staged files |
 | `NoUnstagedChanges` | a tracked file differs from the index: it was edited or deleted and the change is not staged. A file moved without `git mv` is listed as its old path, deleted; its new path is untracked. | untracked files, staged changes, line endings and the executable bit where Git ignores them (see below) |
+| `NoConflicts` | a file still has an unresolved conflict from a merge, pull, rebase, cherry-pick, revert, or stash pop: Git keeps its conflicting versions, and refuses to commit, until the file is resolved and staged with `git add`. Binary files and files one side deleted are included, although they hold no conflict markers. | conflicts resolved and staged, even when conflict markers were left in the file (see below) |
 
 The other v1 checks are added one by one; see Phase 3 in [docs/tasks.md](docs/tasks.md).
 
@@ -36,10 +37,12 @@ The other v1 checks are added one by one; see Phase 3 in [docs/tasks.md](docs/ta
 - With `core.autocrlf=true`, a file Git checked out with CRLF line endings and saved again unchanged is not a change. A file rewritten with only its line endings changed, CRLF to LF, is listed as modified, as `git status` lists it, although `git diff` shows nothing; `git add` clears it and stages nothing.
 - With `core.filemode=false`, which Git for Windows sets in every repository it creates or clones, a file committed as executable is not a change on a file system that has no executable bit.
 
-Not supported yet:
+`NoUnstagedChanges` does not support these yet:
 
 - A tracked file replaced by another type, such as a symlink, which `git status` prints as `typechange`: it is not reported.
 - A file recorded with `git add -N` (intent to add), which `git status` prints as ` A`: it is reported as `modified`, and the `git restore` line offered for it would empty the file, because Git holds it with no content. Use `git add` on it.
+
+`NoConflicts` reads only what Git records: a conflict counts as resolved once `git add` has staged the file. It does not search files for conflict markers, so a file staged with `<<<<<<<` still in it passes. Markers left in code usually break the build, but not in a file nothing compiles or reads, such as Markdown.
 
 ## Build
 
