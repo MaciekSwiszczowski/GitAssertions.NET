@@ -4,9 +4,9 @@ namespace GitAssertions.Tests.Infrastructure;
 
 /// <summary>
 /// Pins the scenario helpers of <see cref="TempRepo"/> (<c>AddFile</c>, <c>Stage</c>, <c>Commit</c>, <c>Delete</c>,
-/// <c>StageAsExecutable</c>, <c>CreateBranch</c>, <c>Checkout</c>, <c>Merge</c>, <c>AddGitIgnore</c>): each one must
-/// leave the repository in the state its name says, because every later test sets up its own scenario with them and
-/// trusts the result.
+/// <c>StageAsExecutable</c>, <c>CreateBranch</c>, <c>Checkout</c>, <c>Diverge</c>, <c>Merge</c>, <c>Rebase</c>,
+/// <c>CherryPick</c>, <c>Revert</c>, <c>AddGitIgnore</c>): each one must leave the repository in the state its name
+/// says, because every later test sets up its own scenario with them and trusts the result.
 /// </summary>
 public sealed class TempRepoScenarioTests
 {
@@ -249,6 +249,113 @@ public sealed class TempRepoScenarioTests
         File.ReadAllText(Path.Combine(repo.Root, TempRepo.InitialFile)).ShouldContain("<<<<<<<");
         repo.Repo.Info.CurrentOperation.ShouldBe(CurrentOperation.Merge);
         repo.Repo.Head.Tip.Sha.ShouldBe(mainTip);
+    }
+
+    // Trigger: A test author lets a feature branch and main change readme.txt in different ways.
+    // Behavior: Each branch holds its own commit on top of the initial one, and main is left checked out and clean.
+    // Assertion: HEAD reads main, readme.txt holds main's text on disk and feature's text on the feature branch, both
+    //            tips have the initial commit as their only parent, and the status lists no file.
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
+    public void Diverge_ChangesOnBothBranches_LeavesMainCheckedOutWithBothCommits()
+    {
+        // Arrange
+        using TempRepo repo = TempRepo.Create();
+        string initialSha = repo.Repo.Head.Tip.Sha;
+
+        // Act
+        repo.Diverge(
+            "feature",
+            onFeature: static branch => branch.AddFile(TempRepo.InitialFile, "feature\n").Stage(TempRepo.InitialFile),
+            onMain: static branch => branch.AddFile(TempRepo.InitialFile, "main\n").Stage(TempRepo.InitialFile));
+
+        // Assert
+        repo.Repo.Head.FriendlyName.ShouldBe(TempRepo.MainBranch);
+        File.ReadAllText(Path.Combine(repo.Root, TempRepo.InitialFile)).ShouldBe("main\n");
+        Commit featureTip = repo.Repo.Branches["feature"].Tip;
+        ((Blob)featureTip[TempRepo.InitialFile].Target).GetContentText().ShouldBe("feature\n");
+        featureTip.Parents.Select(static parent => parent.Sha).ShouldBe([initialSha]);
+        repo.Repo.Head.Tip.Parents.Select(static parent => parent.Sha).ShouldBe([initialSha]);
+        repo.Repo.RetrieveStatus().Select(static entry => entry.FilePath).ShouldBeEmpty();
+    }
+
+    // Trigger: A test author rebases a feature branch that edited the same line of readme.txt as main onto main.
+    // Behavior: The rebase stops the way git rebase stops on a conflict: the file is left conflicted with conflict
+    //           markers written into it, the rebase stays in progress, and the feature branch still points at its own
+    //           commit.
+    // Assertion: readme.txt reads Conflicted and holds a "<<<<<<<" marker, the current operation reads RebaseMerge, and
+    //            the feature branch tip is unchanged.
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
+    public void Rebase_BranchEditedSameLine_LeavesConflictAndRebaseInProgress()
+    {
+        // Arrange
+        using TempRepo repo = TempRepo.Create();
+        repo.Diverge(
+            "feature",
+            onFeature: static branch => branch.AddFile(TempRepo.InitialFile, "feature\n").Stage(TempRepo.InitialFile),
+            onMain: static branch => branch.AddFile(TempRepo.InitialFile, "main\n").Stage(TempRepo.InitialFile));
+        repo.Checkout("feature");
+        string featureTip = repo.Repo.Head.Tip.Sha;
+
+        // Act
+        repo.Rebase(TempRepo.MainBranch);
+
+        // Assert
+        repo.Repo.RetrieveStatus(TempRepo.InitialFile).ShouldBe(FileStatus.Conflicted);
+        File.ReadAllText(Path.Combine(repo.Root, TempRepo.InitialFile)).ShouldContain("<<<<<<<");
+        repo.Repo.Info.CurrentOperation.ShouldBe(CurrentOperation.RebaseMerge);
+        repo.Repo.Branches["feature"].Tip.Sha.ShouldBe(featureTip);
+    }
+
+    // Trigger: A test author cherry-picks the commit of a feature branch that edited the same line of readme.txt as
+    //          main onto main.
+    // Behavior: The cherry-pick stops the way git cherry-pick stops on a conflict: the file is left conflicted with
+    //           conflict markers written into it, the cherry-pick stays in progress, and nothing is committed.
+    // Assertion: readme.txt reads Conflicted and holds a "<<<<<<<" marker, the current operation reads CherryPick, and
+    //            HEAD is still main's last commit.
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
+    public void CherryPick_CommitEditedSameLine_LeavesConflictAndCherryPickInProgress()
+    {
+        // Arrange
+        using TempRepo repo = TempRepo.Create();
+        repo.Diverge(
+            "feature",
+            onFeature: static branch => branch.AddFile(TempRepo.InitialFile, "feature\n").Stage(TempRepo.InitialFile),
+            onMain: static branch => branch.AddFile(TempRepo.InitialFile, "main\n").Stage(TempRepo.InitialFile));
+        string mainTip = repo.Repo.Head.Tip.Sha;
+
+        // Act
+        repo.CherryPick("feature");
+
+        // Assert
+        repo.Repo.RetrieveStatus(TempRepo.InitialFile).ShouldBe(FileStatus.Conflicted);
+        File.ReadAllText(Path.Combine(repo.Root, TempRepo.InitialFile)).ShouldContain("<<<<<<<");
+        repo.Repo.Info.CurrentOperation.ShouldBe(CurrentOperation.CherryPick);
+        repo.Repo.Head.Tip.Sha.ShouldBe(mainTip);
+    }
+
+    // Trigger: A test author reverts an earlier commit that edited a line of readme.txt which a later commit edited
+    //          again.
+    // Behavior: The revert stops the way git revert stops on a conflict: the file is left conflicted with conflict
+    //           markers written into it, the revert stays in progress, and nothing is committed.
+    // Assertion: readme.txt reads Conflicted and holds a "<<<<<<<" marker, the current operation reads Revert, and HEAD
+    //            is still the later commit.
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
+    public void Revert_EarlierCommitEditedAgainLater_LeavesConflictAndRevertInProgress()
+    {
+        // Arrange
+        using TempRepo repo = TempRepo.Create();
+        repo.AddFile(TempRepo.InitialFile, "first\n").Stage(TempRepo.InitialFile).Commit("Edit first")
+            .AddFile(TempRepo.InitialFile, "second\n").Stage(TempRepo.InitialFile).Commit("Edit second");
+        string laterTip = repo.Repo.Head.Tip.Sha;
+
+        // Act
+        repo.Revert("HEAD~1");
+
+        // Assert
+        repo.Repo.RetrieveStatus(TempRepo.InitialFile).ShouldBe(FileStatus.Conflicted);
+        File.ReadAllText(Path.Combine(repo.Root, TempRepo.InitialFile)).ShouldContain("<<<<<<<");
+        repo.Repo.Info.CurrentOperation.ShouldBe(CurrentOperation.Revert);
+        repo.Repo.Head.Tip.Sha.ShouldBe(laterTip);
     }
 
     // Trigger: A test author adds an ignore rule for log files and then adds a log file.

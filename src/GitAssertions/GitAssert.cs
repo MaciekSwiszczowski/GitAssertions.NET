@@ -106,6 +106,21 @@ public sealed class GitAssert
     }
 
     /// <summary>
+    /// Checks that no merge, rebase, cherry-pick, or revert is left stopped halfway: such an operation stops on a
+    /// conflict and stays in progress until <c>git &lt;operation&gt; --continue</c> finishes it or <c>--abort</c> gives
+    /// it up. The failure names the operation and the two commands; it lists no file, because the operation belongs to
+    /// the repository, not to a path. Any other operation libgit2 reports, such as a bisect, fails too, with a generic
+    /// message that names it as libgit2 does and points to <c>git status</c>.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// The repository cannot be read, for example because its folder was deleted after <see cref="Open"/>.
+    /// </exception>
+    public CheckResult NoOperationInProgress()
+    {
+        return Read(NoOperationInProgressCheck.Run);
+    }
+
+    /// <summary>
     /// Opens the repository, runs <paramref name="read"/> on it, and closes it before returning. Every check reads
     /// through here, so no handle outlives a call. The repository is closed once <paramref name="read"/> returns, so
     /// it must return finished data (a list, a count), never a lazy query over the repository.

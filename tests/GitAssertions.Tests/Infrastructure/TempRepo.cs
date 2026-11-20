@@ -113,6 +113,58 @@ internal sealed class TempRepo : IDisposable
         return this;
     }
 
+    /// <summary>
+    /// Commits <paramref name="onFeature"/>'s change on a new branch <paramref name="branch"/> and
+    /// <paramref name="onMain"/>'s change on <see cref="MainBranch"/>, both starting from the commit HEAD is on, and
+    /// leaves <see cref="MainBranch"/> checked out: work done in parallel that is about to be brought together.
+    /// </summary>
+    public TempRepo Diverge(string branch, Func<TempRepo, TempRepo> onFeature, Func<TempRepo, TempRepo> onMain)
+    {
+        onFeature(CreateBranch(branch).Checkout(branch)).Commit("Change on " + branch);
+        onMain(Checkout(MainBranch)).Commit("Change on " + MainBranch);
+        return this;
+    }
+
+    /// <summary>
+    /// Rebases the checked-out branch onto <paramref name="upstream"/>, like <c>git rebase</c>. A conflict does not
+    /// throw: the rebase stops as <c>git rebase</c> stops, with the conflicted files left in the index and on disk and
+    /// the rebase in progress, which is the state the conflict and operation checks read. Meant for a rebase that
+    /// stops: LibGit2Sharp takes the committer as an identity with no time, so a commit a finished rebase writes is
+    /// stamped with the clock, not the fixed base.
+    /// </summary>
+    public TempRepo Rebase(string upstream)
+    {
+        Repo.Rebase.Start(
+            branch: null,
+            Repo.Branches[upstream],
+            onto: null,
+            new Identity("GitAssertions Tests", "tests@gitassertions.invalid"),
+            options: null);
+        return this;
+    }
+
+    /// <summary>
+    /// Cherry-picks the tip of <paramref name="branch"/> onto the checked-out branch, like <c>git cherry-pick</c>. A
+    /// conflict does not throw: the cherry-pick stops as <c>git cherry-pick</c> stops, with the conflicted files left
+    /// in the index and on disk and the cherry-pick in progress.
+    /// </summary>
+    public TempRepo CherryPick(string branch)
+    {
+        Repo.CherryPick(Repo.Branches[branch].Tip, NextSignature());
+        return this;
+    }
+
+    /// <summary>
+    /// Reverts the commit <paramref name="commitish"/> names, such as <c>HEAD~1</c>, like <c>git revert</c>. A conflict
+    /// does not throw: the revert stops as <c>git revert</c> stops, with the conflicted files left in the index and on
+    /// disk and the revert in progress.
+    /// </summary>
+    public TempRepo Revert(string commitish)
+    {
+        Repo.Revert(Repo.Lookup<Commit>(commitish), NextSignature());
+        return this;
+    }
+
     /// <summary>Deletes a file from the working tree only; the index is left alone.</summary>
     public TempRepo Delete(string path)
     {

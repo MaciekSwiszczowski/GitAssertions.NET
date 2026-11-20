@@ -1,0 +1,5 @@
+﻿Rule: NoOperationInProgress
+IsHealthy: True
+Files (0):
+Message:
+NoOperationInProgress: OK.

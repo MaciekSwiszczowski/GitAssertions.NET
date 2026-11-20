@@ -237,8 +237,6 @@ public sealed class NoConflictsTests
         Func<TempRepo, TempRepo> onFeature,
         Func<TempRepo, TempRepo> onMain)
     {
-        onFeature(repo.CreateBranch(Feature).Checkout(Feature)).Commit("Change on feature");
-        onMain(repo.Checkout(TempRepo.MainBranch)).Commit("Change on main");
-        repo.Merge(Feature);
+        repo.Diverge(Feature, onFeature, onMain).Merge(Feature);
     }
 }

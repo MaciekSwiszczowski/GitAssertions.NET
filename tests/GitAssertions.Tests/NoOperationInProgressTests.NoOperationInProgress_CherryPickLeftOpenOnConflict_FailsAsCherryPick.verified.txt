@@ -1,0 +1,9 @@
+﻿Rule: NoOperationInProgress
+IsHealthy: False
+Files (0):
+Message:
+NoOperationInProgress: a cherry-pick is in progress.
+Fix: once all conflicts are resolved and staged, run:
+  git cherry-pick --continue
+Or abort it:
+  git cherry-pick --abort

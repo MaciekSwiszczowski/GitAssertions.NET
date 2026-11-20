@@ -8,17 +8,17 @@ The library is **read-only**. It inspects the repository and reports what it fin
 
 ## Scope
 
-Version 1 is a two-day build done with agents. Everything else waits for phase two and gets added when it's needed.
+Version 1 is a two-day build done with agents. Everything else comes later, in the phases after it in [tasks.md](tasks.md): integration tests with real Git, accurate messages, security, release preparation, and nice-to-have features.
 
 - **Version 1:** NoUntrackedFiles, NoUnstagedChanges, NoConflicts, NoOperationInProgress, NoTrackedIgnoredFiles, and a plain RunAll with no options (every v1 check always runs). Unit tests use LibGit2Sharp only, so every v1 scenario is set up in-process.
-- **Phase two:** a `typechange` entry kind for NoUnstagedChanges (a tracked file replaced by another type, such as a symlink), an intent-to-add kind for NoUnstagedChanges (a file recorded with `git add -N`, which gets `git add` and no discard line), NoMixedStaging (a narrower check than NoUnstagedChanges, which also reports a file changed again after it was staged; its own method, left out of the default `RunAll` so no file prints twice), NotDetachedHead, OnExpectedBranch, NoStaleIndexLock, configuration (enabling and disabling checks, allow-lists, expected branch), the CliWrap real-Git integration tests, and NuGet packaging. Use a project reference until then.
+- **Later:** a name of its own in NoOperationInProgress for each rarer operation (a cherry-pick or revert of several commits, bisect, `git am`), a `typechange` entry kind for NoUnstagedChanges (a tracked file replaced by another type, such as a symlink), an intent-to-add kind for NoUnstagedChanges (a file recorded with `git add -N`, which gets `git add` and no discard line), NoMixedStaging (a narrower check than NoUnstagedChanges, which also reports a file changed again after it was staged; its own method, left out of the default `RunAll` so no file prints twice), NotDetachedHead, OnExpectedBranch, NoStaleIndexLock, configuration (enabling and disabling checks, allow-lists, expected branch), the CliWrap real-Git integration tests, and NuGet packaging. Use a project reference until then.
 
-Test scenarios that depend on a phase-two feature (allow-listed paths, disabled checks, verification against the real git CLI) are marked *(phase two)* below and are not part of v1.
+Test scenarios that depend on a later feature (allow-listed paths, disabled checks, verification against the real git CLI) are marked *(later)* below and are not part of v1.
 
 ## Goals
 
 - Readable, one-line assertions per rule.
-- No external git.exe processes in the library at runtime. Everything the library does runs in-process through LibGit2Sharp (libgit2). This rule applies to the shipped library only; the phase-two integration tests deliberately call the git CLI to set up scenarios.
+- No external git.exe processes in the library at runtime. Everything the library does runs in-process through LibGit2Sharp (libgit2). This rule applies to the shipped library only; the later integration tests deliberately call the git CLI to set up scenarios.
 - Safe on build machines: no background processes and no leaked file handles.
 - Clear failure messages that list the offending files and suggest a fix.
 
@@ -52,7 +52,7 @@ Test scenarios that depend on a phase-two feature (allow-listed paths, disabled 
   - `Failures`: the entries of `Results` where `IsHealthy` is false.
   - `IsHealthy`: true only when every check is healthy.
   - `Message`: as defined under [RunAll message](#runall-message); two broken rules produce two message blocks.
-- Phase two: `git.RunAll(options)` adds options that disable checks, set allow-lists and the expected branch.
+- Later: `git.RunAll(options)` adds options that disable checks, set allow-lists and the expected branch.
 
 ## Checks
 
@@ -62,11 +62,11 @@ Each check's "Fix" below is the suggestion printed in its failure message, not s
 
 1. **NoUntrackedFiles**: no untracked files that aren't ignored. Detect with `FileStatus.NewInWorkdir`.
    - Fix: `git add` the files if they belong, or delete them, or add them to .gitignore.
-   - Tests: clean repo passes; new file in root fails and lists its path; new file in a nested untracked folder fails and lists the file (not just the folder); file matching .gitignore passes; empty folders pass; edits, deletes, and staged new files pass (NoUnstagedChanges reports the edits and deletes); a file moved without `git mv` lists its new path, as `git status` does; allow-listed path passes *(phase two)*.
-2. **NoUnstagedChanges**: no modified or deleted files left unstaged. Detect with `ModifiedInWorkdir`, `DeletedFromWorkdir`. The check reports what `git status` reports, so a file moved without `git mv` is its old path, deleted (its new path is untracked, for NoUntrackedFiles), and a change of line endings only is reported when `git status` reports it. A tracked file replaced by another type, such as a symlink, which `git status` prints as `typechange`, is not reported in v1 (phase two). A file recorded with `git add -N` (intent to add) is not supported in v1 (phase two): it is reported as `modified`, and the `git restore` line offered for it would empty the file, because the index holds it with no content.
+   - Tests: clean repo passes; new file in root fails and lists its path; new file in a nested untracked folder fails and lists the file (not just the folder); file matching .gitignore passes; empty folders pass; edits, deletes, and staged new files pass (NoUnstagedChanges reports the edits and deletes); a file moved without `git mv` lists its new path, as `git status` does; allow-listed path passes *(later)*.
+2. **NoUnstagedChanges**: no modified or deleted files left unstaged. Detect with `ModifiedInWorkdir`, `DeletedFromWorkdir`. The check reports what `git status` reports, so a file moved without `git mv` is its old path, deleted (its new path is untracked, for NoUntrackedFiles), and a change of line endings only is reported when `git status` reports it. A tracked file replaced by another type, such as a symlink, which `git status` prints as `typechange`, is not reported in v1 (later). A file recorded with `git add -N` (intent to add) is not supported in v1 (later): it is reported as `modified`, and the `git restore` line offered for it would empty the file, because the index holds it with no content.
    - Fix: `git add <file>` to stage the change, or `git restore <file>` to discard it.
-   - Tests: clean repo passes; edited tracked file fails; deleted tracked file fails; a file moved without `git mv` lists the old path as deleted; a file staged and then edited again fails as modified (`MM`, `AM`), and one staged and then deleted fails as deleted (`AD`); line-ending-only change with autocrlf set behaves as documented (set up with LibGit2Sharp in v1; checked against the real git CLI *(phase two)*); file mode change on Windows does not fail; an unresolved conflict passes (NoConflicts reports it).
-3. **NoMixedStaging** *(phase two)*: no file both staged and changed again. Narrower than NoUnstagedChanges, which reports these files too, and the only check for someone who keeps other unstaged edits on purpose. Called on its own, not part of the default `RunAll`.
+   - Tests: clean repo passes; edited tracked file fails; deleted tracked file fails; a file moved without `git mv` lists the old path as deleted; a file staged and then edited again fails as modified (`MM`, `AM`), and one staged and then deleted fails as deleted (`AD`); line-ending-only change with autocrlf set behaves as documented (set up with LibGit2Sharp in v1; checked against the real git CLI *(later)*); file mode change on Windows does not fail; an unresolved conflict passes (NoConflicts reports it).
+3. **NoMixedStaging** *(later)*: no file both staged and changed again. Narrower than NoUnstagedChanges, which reports these files too, and the only check for someone who keeps other unstaged edits on purpose. Called on its own, not part of the default `RunAll`.
    - Fix: `git add <file>` to stage the latest version, then commit.
    - Tests: staged-only file passes this check; unstaged-only file passes this check; staged then edited again fails; staged then deleted from disk fails.
 4. **NoConflicts**: no conflicted entries. Detect with `repo.Index.Conflicts`: the paths that still hold conflict stages in the index, as `git ls-files -u` lists them. The check reads the index only, so a file staged with conflict markers left in it passes (D11 in docs/review-findings.md).
@@ -74,7 +74,7 @@ Each check's "Fix" below is the suggestion printed in its failure message, not s
    - Tests: clean repo passes; repository with no commits passes; merge of two branches editing the same line fails and lists the file; conflict resolved and staged passes; delete/modify conflict fails; add/add conflict (both branches created the same file) fails; binary-file conflict fails.
 5. **NoOperationInProgress**: no unfinished merge, rebase, cherry-pick or revert. Detect with `repo.Info.CurrentOperation`.
    - Fix: `git <operation> --continue` once conflicts are resolved, or `git <operation> --abort`, where `<operation>` is merge, rebase, cherry-pick, or revert.
-   - Tests: clean repo passes; conflicting merge left open fails and names "merge"; conflicting rebase left open fails and names "rebase"; conflicting cherry-pick left open fails and names "cherry-pick"; conflicting revert left open fails and names "revert"; aborted operation passes.
+   - Tests: clean repo passes; conflicting merge left open fails and names "merge"; conflicting rebase left open fails and names "rebase"; conflicting cherry-pick left open fails and names "cherry-pick"; conflicting revert left open fails and names "revert"; a cherry-pick or revert of several commits, bisect, `git merge --no-commit`, and an interactive rebase stopped at `edit` each fail and name the operation *(later)*; an aborted operation passes *(later)*; a repository with no commits passes *(later)*.
 6. **NotDetachedHead**: HEAD points to a branch. Detect with `repo.Info.IsHeadDetached`.
    - Fix: `git switch <branch>` (create one with `git switch -c` if the commits must be kept).
    - Tests: on a branch passes; checkout of a commit SHA fails and the message shows the SHA; fresh repo with no commits (unborn HEAD) passes.
@@ -84,17 +84,17 @@ Each check's "Fix" below is the suggestion printed in its failure message, not s
 8. **OnExpectedBranch**: HEAD is on the configured branch (optional).
    - Fix: `git switch <expected-branch>`.
    - Tests: matching branch passes; other branch fails and shows both names; not configured means the check is skipped; detached HEAD fails with a clear message.
-9. **NoTrackedIgnoredFiles**: no tracked files that match ignore rules. Detect with `repo.Ignore.IsPathIgnored` on tracked paths.
-   - Fix: `git rm --cached <file>` (the file stays on disk), then commit.
-   - Tests: tracked file not ignored passes; file committed before the ignore rule was added fails; file force-added with `git add -f` fails; bin/ and obj/ folder content fails and is grouped by folder; negated rule (`!keep.txt`) passes.
+9. **NoTrackedIgnoredFiles**: no tracked files that match ignore rules. Detect with `repo.Ignore.IsPathIgnored` on tracked paths. The check reads every ignore source that `git ls-files -i -c --exclude-standard` reads: the repository's `.gitignore` files, `.git/info/exclude`, and the file named by `core.excludesFile`.
+   - Fix: `git rm --cached <file>` (the file stays on disk), then commit. No line offers to keep a file tracked by changing the ignore rules: the right edit depends on which rule matched, which libgit2 does not report (F10 in docs/review-findings.md).
+   - Tests: tracked file not ignored passes; file committed before the ignore rule was added fails; file force-added with `git add -f` fails; bin/ and obj/ folder content fails and is grouped by folder; negated rule (`!keep.txt`) passes; with `bin/*` and `!bin/keep.txt`, a tracked `bin/keep.txt` passes and a tracked `bin/app.dll` fails as an entry of its own, not grouped, because the folder itself is not ignored.
 
-Cross-cutting tests: `RunAll` reports every failing check at once (two broken rules give two `Failures` and two message blocks in `Message`); a clean repo makes `RunAll` healthy; disabled checks are skipped *(phase two)*; no repo handle outlives a check (the temp folder can be deleted on Windows right after a check, with nothing disposed); a path that isn't a repository throws a clear error.
+Cross-cutting tests: `RunAll` reports every failing check at once (two broken rules give two `Failures` and two message blocks in `Message`); a clean repo makes `RunAll` healthy; disabled checks are skipped *(later)*; no repo handle outlives a check (the temp folder can be deleted on Windows right after a check, with nothing disposed); a path that isn't a repository throws a clear error.
 
 ## Test tooling
 
 - Unit tests (v1) use LibGit2Sharp to set up scenarios: in-process, fast, and no git processes to clean up. They cut libgit2 off from the machine's and the user's git config, so a scenario gives the same result on every machine.
 - `ThisRepositoryTests` runs every check on this repository itself. It lives in a test project of its own, `GitAssertions.ThisRepository.Tests`, which does not cut libgit2 off from git config: libgit2 settings are process-wide, and a real repository has to be read as `git status` reads it, as a user's own test project reads theirs.
-- Phase two: a small set of integration tests creates the tricky scenarios with the real git CLI, so libgit2 is checked against real Git: autocrlf / line endings, `git add -f`, files committed before an ignore rule, a merge or rebase left in progress, and a stale index.lock.
+- Later (Phase 5 in tasks.md): a small set of integration tests creates the tricky scenarios with the real git CLI, so libgit2 is checked against real Git: autocrlf / line endings, `git add -f`, files committed before an ignore rule, and a merge or rebase left in progress. A stale index.lock is tested the same way, with the NoStaleIndexLock check. The integration tests also set up the states libgit2 cannot create at all, such as bisect, a cherry-pick or revert of several commits, and an interactive rebase; those scenarios are tested with real Git only, never by writing Git's state files by hand.
 - The CLI tests run git through CliWrap, with a timeout and cancellation so no process is left running. They're tagged as integration tests and skipped when git isn't on PATH.
 
 ### Platforms
@@ -102,7 +102,7 @@ Cross-cutting tests: `RunAll` reports every failing check at once (two broken ru
 - v1 builds and runs its tests on Windows only (`windows-latest`).
 - **Before the first public release (1.0), the tests also run on Linux** (`ubuntu-latest`), in CI next to the Windows run. Linux behaves differently in ways the checks depend on: the executable bit is a real file mode, symbolic links need no privileges, paths are case-sensitive, and no machine-wide `core.autocrlf` is set. A test that depends on one platform's behavior, such as the file mode test, is written for each platform or skipped on the one where it does not apply, and says so in its header.
 
-## Configuration (phase two)
+## Configuration (later)
 
 v1 has no configuration: `RunAll()` runs every v1 check and individual checks take no options.
 
@@ -226,11 +226,23 @@ Or abort it:
   git merge --abort
 ```
 
-Any other operation libgit2 reports (e.g. `am`, `bisect`) uses `a Git operation (<name>) is in progress.` with the fix line `Fix: run "git status" to see how to finish or abort it.` and no command. It is not tested in v1.
+Any other operation libgit2 reports uses `a Git operation (<name>) is in progress.` with the fix line `Fix: run "git status" to see how to finish or abort it.` and no command. `<name>` is libgit2's name for it, the `CurrentOperation` value. In v1 that covers a cherry-pick or revert of several commits (`CherryPickSequence`, `RevertSequence`), bisect (`Bisect`), and `git am` (`ApplyMailbox`, `ApplyMailboxOrRebase`); later tasks give each its own name and Fix lines. It is not tested in v1.
+
+```text
+NoOperationInProgress: a Git operation (<name>) is in progress.
+Fix: run "git status" to see how to finish or abort it.
+```
+
+Example:
+
+```text
+NoOperationInProgress: a Git operation (Bisect) is in progress.
+Fix: run "git status" to see how to finish or abort it.
+```
 
 ### NoTrackedIgnoredFiles
 
-When an ignored folder contains tracked files, the folder is one entry, `<folder>/ (<k> files)`, and the command removes it recursively. Other files are listed one by one. `Files` holds every individual file.
+When a folder is itself ignored and every tracked file under it is ignored, the folder is one entry, `<folder>/ (<k> files)` (`(1 file)` for one), and the command removes it recursively. The entry is the topmost such folder, so `src/App/bin/` stands for everything under it. A folder that holds a tracked file the check does not report is never grouped, so the command never untracks a file the message did not list. Other files are listed one by one. `<n>` counts entries, a folder as one; `Files` holds every individual file.
 
 ```text
 NoTrackedIgnoredFiles: <n> tracked path(s) match ignore rules.
@@ -285,7 +297,7 @@ Or discard the changes:
   git restore -- readme.txt
 ```
 
-Phase-two checks will follow the same common format when they are added.
+Later checks will follow the same common format when they are added.
 
 ## Security
 
@@ -336,7 +348,7 @@ Messages usually end up in test output and CI logs, so they reveal file names, w
 
 `TempRepo` keeps its repository in a `TemporaryDirectory` (Meziantou.Framework.TemporaryDirectory), a uniquely named folder under the system temp directory that is deleted on dispose. Its delete clears read-only flags (libgit2 writes read-only files under `.git/objects`), retries a locked file, and removes a junction or symlink as a link without following it, so nothing outside the folder is touched. `TempRepo` releases the repository handle before the folder is deleted.
 
-### Supply chain (phase two)
+### Supply chain (later)
 
 - Pin package versions (central package management with lock files) and keep GitHub Actions pinned to commit SHAs.
 - Enable Dependabot for NuGet packages and GitHub Actions.
