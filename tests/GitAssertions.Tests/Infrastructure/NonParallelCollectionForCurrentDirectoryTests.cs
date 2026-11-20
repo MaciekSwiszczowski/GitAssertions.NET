@@ -7,16 +7,17 @@ namespace GitAssertions.Tests.Infrastructure;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Why it is needed: xUnit runs test classes in parallel, on threads of one process, but the current directory
-/// belongs to the whole process, not to one thread. While a test has the current directory pointed somewhere else,
-/// every other test running at that moment resolves its relative paths against that folder instead, and can fail or
-/// read the wrong repository for a reason that has nothing to do with what it tests. Two such tests running together
-/// would also overwrite each other's setting.
+/// Why it is needed: xUnit runs every test of this assembly in parallel (<c>AssemblyParallelization.cs</c>), on threads
+/// of one process, but the current directory belongs to the whole process, not to one thread. While a test has the
+/// current directory pointed somewhere else, every other test running at that moment resolves its relative paths
+/// against that folder instead, and can fail or read the wrong repository for a reason that has nothing to do with
+/// what it tests. Two such tests running together would also overwrite each other's setting.
 /// </para>
 /// <para>
 /// How it works: a test class joins with <c>[Collection(NonParallelCollectionForCurrentDirectoryTests.Name)]</c>.
-/// <c>DisableParallelization = true</c> makes xUnit run this collection only after every parallel test has finished,
-/// and then one test at a time: https://xunit.net/docs/running-tests-in-parallel
+/// <c>DisableParallelization = true</c> guarantees that a test of this collection does not run in parallel against any
+/// other test, so the collection also runs one test at a time. The xUnit docs promise nothing about when it runs
+/// relative to the others, so a test must not depend on that: https://xunit.net/docs/running-tests-in-parallel
 /// </para>
 /// <para>
 /// A test class that joins it must still put the current directory back in its <c>Dispose</c>, so the tests that
