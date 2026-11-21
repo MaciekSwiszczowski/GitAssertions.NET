@@ -102,7 +102,8 @@ Cross-cutting tests: `RunAll` reports every failing check at once (two broken ru
 ### Platforms
 
 - v1 builds and runs its tests on Windows only (`windows-latest`).
-- **Before the first public release (1.0), the tests also run on Linux** (`ubuntu-latest`), in CI next to the Windows run. Linux behaves differently in ways the checks depend on: the executable bit is a real file mode, symbolic links need no privileges, paths are case-sensitive, and no machine-wide `core.autocrlf` is set. A test that depends on one platform's behavior, such as the file mode test, is written for each platform or skipped on the one where it does not apply, and says so in its header.
+- **Before the first public release (1.0), the tests also run on Linux and macOS** (`ubuntu-latest` and `macos-latest`), in CI next to the Windows run, one job per platform (a matrix, so one platform failing does not cancel the others). Linux and macOS behave differently in ways the checks depend on: the executable bit is a real file mode, symbolic links need no privileges, and no machine-wide `core.autocrlf` is set. Linux paths are case-sensitive, macOS paths are case-insensitive by default, and a macOS temporary folder is reached through a symbolic link (`/var` is `/private/var`), so a path read back from Git can differ from the one the test created. A test that depends on one platform's behavior, such as the file mode test, is written for each platform or skipped on the one where it does not apply, and says so in its header.
+- The missing `core.autocrlf` is why a file that is CRLF in the working tree and LF in the index reads as modified on Linux and macOS, while Windows hides it. `ThisRepositoryTests` shows it: it reads this repository as `git status` does. Files here are LF (`.editorconfig`: `end_of_line = lf`).
 
 ## Configuration (later)
 

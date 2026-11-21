@@ -21,7 +21,13 @@ env:
 
 jobs:
   build-and-test:
-    runs-on: windows-latest
+    name: build-and-test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # One platform failing must not hide how the others do: each leg reports its own result.
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v7
 

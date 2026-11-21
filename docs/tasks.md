@@ -154,9 +154,10 @@ This phase will grow: more security findings become tasks here as they are decid
 The first public release. More findings for it become tasks here as they are decided.
 
 - [ ] **T2.5 Packfiles.** Research first: how Git stores objects in packfiles (`.git/objects/pack`), which every cloned repository uses, and how libgit2 reads them. Background, measured on 2026-11-18: libgit2 keeps a packfile open once it has read from it, and Windows then refuses to delete it; loose objects are never held open, so a fresh TempRepo cannot show a leaked handle, and no test today proves that a read releases its handle (a `Repository` kept in a field passes them all). Then, tests first: a TempRepo helper that packs the repository's objects, and a test that on a packed repository the folder can be deleted right after a `GitAssert` read, with nothing disposed. A `Repository` kept in a field must turn that test red.
-- [ ] **T8.1 Linux CI leg.** Run restore, build, and test on `ubuntu-latest` as well as `windows-latest` (see the spec's Test tooling > Platforms). Fix or skip, with a stated reason, each test that depends on Windows behavior. Proof: a green CI run on both.
+- [x] **T8.1 Linux and macOS CI legs.** Run restore, build, and test on `ubuntu-latest` and `macos-latest` as well as `windows-latest`, as a job matrix with `fail-fast: false` (see the spec's Test tooling > Platforms). Fix or skip, with a stated reason, each test that depends on the behavior of one platform. Proof: a green CI run on all three.
+  - Ticked on 2026-11-21, before the first CI run: untick it if a leg of the build fails. The matrix is in `ci.yml`. The suite passes on Ubuntu (WSL), 136 of 136, once three files with CRLF line endings were converted to LF; `macos-latest` has not run yet.
 - [ ] **T8.2 NuGet packaging** with SourceLink and package signing, plus a usage sample.
-- [ ] **T8.3 Branch protection** on main, requiring CI.
+- [ ] **T8.3 Branch protection** on main, requiring CI: the three jobs `build-and-test (windows-latest)`, `build-and-test (ubuntu-latest)`, and `build-and-test (macos-latest)` (T8.1). A required check is matched by job name, so renaming a job or a platform leaves the old name required and blocks every pull request.
 
 ## Phase 9: Nice-to-have (after 1.0, when needed)
 
