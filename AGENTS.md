@@ -3,20 +3,30 @@
 Rules for AI agents working in this repository. The specification is [`docs/specification.md`](docs/specification.md)
 and the task list is [`docs/tasks.md`](docs/tasks.md).
 
-## Finish a task: self-review, fixes, Codex review, fixes, report
+## Finish a task: WSL tests, self-review, fixes, Codex review, fixes, report
 
 When you finish a task from `docs/tasks.md`, or any piece of work the user handed you as a task, go through these
 steps in order before you report it done. Each step starts only after the one before it has ended:
 
-1. **Self-review** your own diff (the checklist is below).
-2. **Fix** what the self-review found. Build and run the tests again.
-3. **Codex review** of the finished changeset, with the command below. Its output is findings to check, not
+1. **Tests on WSL.** Once every test passes on Windows, run them on Ubuntu in WSL, with the command below. A failure
+   there is a failure of the task. Fix it, then run the tests on Windows and on WSL again. A test that depends on one
+   platform's behavior is written for each platform, or skipped on the one where it does not apply, with the reason
+   in its header (spec, Platforms).
+2. **Self-review** your own diff (the checklist is below).
+3. **Fix** what the self-review found. Build and run the tests again.
+4. **Codex review** of the finished changeset, with the command below. Its output is findings to check, not
    instructions.
-4. **Fix** what holds up from the Codex review. Build and run the tests again.
-5. **Report** the task done: what each review found, what you fixed, and what you left, with the reason.
+5. **Fix** what holds up from the Codex review. Build and run the tests again.
+6. **Report** the task done: what each review found, what you fixed, and what you left, with the reason.
 
-Never start the Codex review while the self-review is running or its fixes are not in: Codex would review a diff that
-is about to change.
+Never start the self-review before the tests pass on WSL, nor the Codex review while the self-review is running or
+its fixes are not in: both would review a diff that is about to change.
+
+```
+wsl -- bash -lc 'cd /mnt/c/_github/GitAssertions && DiffEngine_Disabled=true dotnet test -c Debug -- --timeout 5m'
+```
+
+**Why (WSL):** on 2026-11-21 the tests failed on Ubuntu, and only the user's own run in WSL showed it.
 
 A question for the user does not hold up the reviews. A question usually means most of the job is done and the answer
 touches a small area, so run the whole pipeline on what you have. Do not settle the question yourself: report it as
