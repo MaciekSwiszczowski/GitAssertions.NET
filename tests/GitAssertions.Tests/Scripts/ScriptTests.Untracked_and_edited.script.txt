@@ -1,0 +1,7 @@
+# The spec's RunAll example built with git: a committed file edited again, and a new file never added.
+git init
+echo initial readme.txt
+git add readme.txt
+git commit -m "Add readme"
+echo changed readme.txt
+echo notes tmp/notes.txt

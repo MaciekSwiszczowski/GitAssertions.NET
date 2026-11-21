@@ -83,6 +83,17 @@ Every test that runs a check ends in a `CheckResultSnapshot` call and asserts no
   `RunAllResult` too. A healthy `RunAll` ends in `VerifyHealthy(nameof(GitAssert.RunAll), result)` and shares
   `RunAll.IsHealthy.verified.txt`. Each result is one line with its files below it, and its own message is left out:
   the check's tests pin it, and the `RunAll` message repeats every failing one.
+- Script scenarios are the exception to the shared healthy file. In `tests/GitAssertions.Tests/Scripts`, each
+  `ScriptTests.<Name>.script.txt` builds a repository with the real git CLI, one line at a time (`git <arguments>`,
+  `echo <content> <path>`, `#` comments; see `GitScript`), and `ScriptTests.<Name>.verified.txt` beside it holds the
+  `RunAll` result, healthy or failing. Both start with the class name, so the IDE nests them under `ScriptTests.cs`
+  like any snapshot test's verified files. A scenario is those two files and no code: `ScriptTests` plays every script
+  in the folder. Here a healthy result is pinned per script, duplicates and all, so a scenario reads as one self-contained
+  pair, and the expectation always comes from that file. Never pick the shared healthy file from the actual result:
+  a script that should fail but comes out healthy would then pass.
+- Choose by what the scenario needs. A C# test with `TempRepo` suits a state libgit2 can set up and a test that
+  names one check. A script suits a story a person or agent would type with git, and anything libgit2 cannot set up
+  the way git does.
 - Write the `.verified.txt` by hand first, a failing check's from the spec's template and example message, then make
   the code match it. Never accept a first-run received file unread.
 - Run tests with `DiffEngine_Disabled=true`, so a mismatch opens no diff tool on the user's desktop.

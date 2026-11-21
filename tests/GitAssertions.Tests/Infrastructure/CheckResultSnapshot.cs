@@ -56,6 +56,19 @@ internal static class CheckResultSnapshot
         return Compare(Render(result), SharedHealthySettings(rule), sourceFile);
     }
 
+    /// <summary>
+    /// Verifies <paramref name="result"/>, what <see cref="GitAssert.RunAll"/> returned after a script was played,
+    /// against <c>&lt;fileName&gt;.verified.txt</c>, with <paramref name="fileName"/> the script's file name without
+    /// its <c>.script.txt</c>, so the script and its snapshot sit side by side under the test class. A healthy result
+    /// is pinned per script too, never chosen from the result.
+    /// </summary>
+    public static Task VerifyScript(string fileName, RunAllResult result, [CallerFilePath] string sourceFile = "")
+    {
+        VerifySettings settings = new();
+        settings.UseFileName(fileName);
+        return Compare(Render(result), settings, sourceFile);
+    }
+
     private static VerifySettings SharedHealthySettings(string rule)
     {
         VerifySettings settings = new();

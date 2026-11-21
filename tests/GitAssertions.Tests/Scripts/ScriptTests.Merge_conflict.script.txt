@@ -1,0 +1,12 @@
+# Both branches change the same line of readme.txt; git merge stops on the conflict and leaves the merge open.
+git init
+echo base readme.txt
+git add readme.txt
+git commit -m "Add readme"
+git switch -c feature
+echo feature readme.txt
+git commit -am "Change readme on feature"
+git switch main
+echo main readme.txt
+git commit -am "Change readme on main"
+git merge feature

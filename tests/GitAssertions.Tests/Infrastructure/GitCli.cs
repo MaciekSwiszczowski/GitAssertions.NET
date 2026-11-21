@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 
 using CliWrap;
+using CliWrap.Builders;
 
 using Meziantou.Framework;
 
@@ -120,10 +121,43 @@ internal static partial class GitCli
     /// </exception>
     public static async Task<string> RunAsync(string workingDirectory, TimeSpan timeout, params string[] arguments)
     {
+        string command = $"{Executable} {string.Join(' ', arguments)}";
+        string argumentText = new ArgumentsBuilder().Add(ConfigArguments).Add(arguments).Build();
+
+        GitRun run = await ExecuteAsync(workingDirectory, timeout, command, argumentText);
+        if (run.ExitCode != 0)
+        {
+            throw new InvalidOperationException(
+                $"{command} exited with code {run.ExitCode}.\n{run.StandardError.Trim()}");
+        }
+
+        return run.StandardOutput;
+    }
+
+    /// <summary>
+    /// Runs git with <paramref name="arguments"/> exactly as written, such as <c>commit -m "Add readme"</c>, and
+    /// returns how it ended. A failure does not throw: a script line may fail on purpose, as a conflicting merge
+    /// does, and the result the script leaves is what the test checks.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">git is missing or too old.</exception>
+    /// <exception cref="TimeoutException">
+    /// git did not finish within the default timeout. It and everything it started were killed first.
+    /// </exception>
+    public static Task<GitRun> RunLineAsync(string workingDirectory, string arguments)
+    {
+        string argumentText = new ArgumentsBuilder().Add(ConfigArguments).Build() + " " + arguments;
+        return ExecuteAsync(workingDirectory, DefaultTimeout, $"{Executable} {arguments}", argumentText);
+    }
+
+    private static async Task<GitRun> ExecuteAsync(
+        string workingDirectory,
+        TimeSpan timeout,
+        string command,
+        string argumentText)
+    {
         CancellationToken runCancellation = TestContext.Current.CancellationToken;
         await InstalledVersion.Value.WaitAsync(runCancellation);
 
-        string command = $"{Executable} {string.Join(' ', arguments)}";
         StringBuilder standardOutput = new();
         StringBuilder standardError = new();
         IReadOnlyDictionary<string, string?> environment = CreateEnvironment(InheritedNames(), EmptyConfigHome.Value);
@@ -134,7 +168,7 @@ internal static partial class GitCli
 
         CommandTask<CommandResult> task = Cli.Wrap(Executable)
             .WithWorkingDirectory(workingDirectory)
-            .WithArguments([.. ConfigArguments, .. arguments])
+            .WithArguments(argumentText)
             .WithEnvironmentVariables(builder => builder.Set(environment))
             .WithStandardOutputPipe(PipeTarget.ToStringBuilder(standardOutput))
             .WithStandardErrorPipe(PipeTarget.ToStringBuilder(standardError))
@@ -145,13 +179,7 @@ internal static partial class GitCli
         try
         {
             CommandResult result = await task;
-            if (result.ExitCode != 0)
-            {
-                throw new InvalidOperationException(
-                    $"{command} exited with code {result.ExitCode}.\n{standardError.ToString().Trim()}");
-            }
-
-            return standardOutput.ToString();
+            return new GitRun(result.ExitCode, standardOutput.ToString(), standardError.ToString());
         }
         catch (OperationCanceledException) when (
             !runCancellation.IsCancellationRequested && timeoutSource.IsCancellationRequested)

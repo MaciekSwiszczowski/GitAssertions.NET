@@ -1,0 +1,29 @@
+﻿IsHealthy: False
+Results (5):
+  NoUntrackedFiles: IsHealthy False, Files (1):
+    tmp/notes.txt
+  NoUnstagedChanges: IsHealthy False, Files (1):
+    readme.txt
+  NoConflicts: IsHealthy True, Files (0):
+  NoOperationInProgress: IsHealthy True, Files (0):
+  NoTrackedIgnoredFiles: IsHealthy True, Files (0):
+Failures (2):
+  NoUntrackedFiles
+  NoUnstagedChanges
+Message:
+2 of 5 Git checks failed.
+
+NoUntrackedFiles: 1 untracked file found.
+  tmp/notes.txt
+Fix:
+  git add -- tmp/notes.txt
+Or delete them:
+  git clean -f -- tmp/notes.txt
+Or ignore them: add the paths to .gitignore.
+
+NoUnstagedChanges: 1 file has unstaged changes.
+  modified: readme.txt
+Fix:
+  git add -- readme.txt
+Or discard the changes:
+  git restore -- readme.txt

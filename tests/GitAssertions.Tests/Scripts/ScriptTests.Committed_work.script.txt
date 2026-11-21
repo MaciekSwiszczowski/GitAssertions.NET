@@ -1,0 +1,6 @@
+# Work is added and committed with git: nothing is left behind.
+git init
+echo initial readme.txt
+echo notes docs/notes.txt
+git add readme.txt docs/notes.txt
+git commit -m "Add readme and notes"

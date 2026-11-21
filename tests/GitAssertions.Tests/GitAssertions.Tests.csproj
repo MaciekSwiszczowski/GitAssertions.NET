@@ -21,6 +21,17 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
   </ItemGroup>
 
+  <!--
+    Nests each script under the test class its name starts with, as Verify nests verified files
+    (Verify.AfterMicrosoftNetSdk.props): ScriptTests.Merge_conflict.script.txt sits under ScriptTests.cs.
+  -->
+  <ItemGroup>
+    <None Update="**\*.script.txt">
+      <ParentFile>$([System.String]::Copy('%(FileName)').Split('.')[0])</ParentFile>
+      <DependentUpon>%(ParentFile).cs</DependentUpon>
+    </None>
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\GitAssertions\GitAssertions.csproj" />
   </ItemGroup>
