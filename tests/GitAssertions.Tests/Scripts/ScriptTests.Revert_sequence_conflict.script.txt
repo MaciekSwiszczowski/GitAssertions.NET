@@ -1,0 +1,10 @@
+# Reverting the second and third changes of readme.txt: reverting the second conflicts with the third, so git stops on it and keeps the revert of the third waiting in .git/sequencer. libgit2 calls that RevertSequence, and Revert when the revert is of one commit.
+git init
+echo base readme.txt
+git add readme.txt
+git commit -m "Add readme"
+echo second readme.txt
+git commit -am "Change readme to second"
+echo third readme.txt
+git commit -am "Change readme to third"
+git revert HEAD~1 HEAD

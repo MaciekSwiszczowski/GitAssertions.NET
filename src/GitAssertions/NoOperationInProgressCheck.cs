@@ -26,8 +26,8 @@ internal static class NoOperationInProgressCheck
         string? command = CommandOf(operation);
         if (command is null)
         {
-            // An operation with no command of its own yet (a bisect, a sequence of several commits, git am): libgit2's
-            // name for it, and a pointer to git status, which says how to finish or abort that one.
+            // An operation with no command of its own yet (a bisect, git am): libgit2's name for it, and a pointer to
+            // git status, which says how to finish or abort that one.
             return CheckResult.Failing(
                 Rule,
                 $"a Git operation ({operation}) is in progress.",
@@ -52,7 +52,9 @@ internal static class NoOperationInProgressCheck
     /// <summary>
     /// The name of the Git command that started the operation, which is also the command that finishes it with
     /// <c>--continue</c> or gives it up with <c>--abort</c>; null for an operation with no mapping yet. libgit2 tells a
-    /// rebase apart by how it was started, which makes no difference to the person who has to finish it.
+    /// rebase apart by how it was started, and a cherry-pick or revert of several commits (it finds Git's
+    /// <c>sequencer/</c> folder beside <c>CHERRY_PICK_HEAD</c> or <c>REVERT_HEAD</c>) from one of a single commit, which
+    /// makes no difference to the person who has to finish it: the same <c>--continue</c> and <c>--abort</c> serve both.
     /// </summary>
     private static string? CommandOf(CurrentOperation operation)
     {
@@ -60,8 +62,8 @@ internal static class NoOperationInProgressCheck
         {
             CurrentOperation.Merge => "merge",
             CurrentOperation.Rebase or CurrentOperation.RebaseInteractive or CurrentOperation.RebaseMerge => "rebase",
-            CurrentOperation.CherryPick => "cherry-pick",
-            CurrentOperation.Revert => "revert",
+            CurrentOperation.CherryPick or CurrentOperation.CherryPickSequence => "cherry-pick",
+            CurrentOperation.Revert or CurrentOperation.RevertSequence => "revert",
             _ => null,
         };
     }

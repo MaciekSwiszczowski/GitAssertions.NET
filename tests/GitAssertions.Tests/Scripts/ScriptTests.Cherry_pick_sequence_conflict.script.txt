@@ -1,0 +1,15 @@
+# Cherry-picking two commits of feature: the first changes the line main changed too, so git stops on it and keeps the second waiting in .git/sequencer. libgit2 calls that CherryPickSequence, and CherryPick when the pick is of one commit.
+git init
+echo base readme.txt
+git add readme.txt
+git commit -m "Add readme"
+git switch -c feature
+echo feature readme.txt
+git commit -am "Change readme on feature"
+echo notes notes.txt
+git add notes.txt
+git commit -m "Add notes on feature"
+git switch main
+echo main readme.txt
+git commit -am "Change readme on main"
+git cherry-pick feature~1 feature

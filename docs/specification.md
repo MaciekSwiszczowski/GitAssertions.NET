@@ -210,7 +210,7 @@ Fix: resolve the conflicts in each file, then run:
 
 ### NoOperationInProgress
 
-No entries; `Files` is empty even on failure. `<operation>` is `merge`, `rebase`, `cherry-pick`, or `revert` (all libgit2 rebase variants map to `rebase`).
+No entries; `Files` is empty even on failure. `<operation>` is `merge`, `rebase`, `cherry-pick`, or `revert` (all libgit2 rebase variants map to `rebase`, and a cherry-pick or revert of several commits, `CherryPickSequence` and `RevertSequence`, maps to `cherry-pick` and `revert` like one of a single commit).
 
 ```text
 NoOperationInProgress: a <operation> is in progress.
@@ -230,7 +230,7 @@ Or abort it:
   git merge --abort
 ```
 
-Any other operation libgit2 reports uses `a Git operation (<name>) is in progress.` with the fix line `Fix: run "git status" to see how to finish or abort it.` and no command. `<name>` is libgit2's name for it, the `CurrentOperation` value. In v1 that covers a cherry-pick or revert of several commits (`CherryPickSequence`, `RevertSequence`), bisect (`Bisect`), and `git am` (`ApplyMailbox`, `ApplyMailboxOrRebase`); later tasks give each its own name and Fix lines. It is not tested in v1.
+Any other operation libgit2 reports uses `a Git operation (<name>) is in progress.` with the fix line `Fix: run "git status" to see how to finish or abort it.` and no command. `<name>` is libgit2's name for it, the `CurrentOperation` value. In v1 that covers bisect (`Bisect`) and `git am` (`ApplyMailbox`, `ApplyMailboxOrRebase`); later tasks give each its own name and Fix lines. It is not tested in v1.
 
 ```text
 NoOperationInProgress: a Git operation (<name>) is in progress.

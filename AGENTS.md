@@ -8,19 +8,33 @@ and the task list is [`docs/tasks.md`](docs/tasks.md).
 When you finish a task from `docs/tasks.md`, or any piece of work the user handed you as a task, go through these
 steps in order before you report it done. Each step starts only after the one before it has ended:
 
-1. **Tests on WSL.** Once every test passes on Windows, run them on Ubuntu in WSL, with the command below. A failure
-   there is a failure of the task. Fix it, then run the tests on Windows and on WSL again. A test that depends on one
-   platform's behavior is written for each platform, or skipped on the one where it does not apply, with the reason
-   in its header (spec, Platforms).
-2. **Self-review** your own diff (the checklist is below).
-3. **Fix** what the self-review found. Build and run the tests again.
-4. **Codex review** of the finished changeset, with the command below. Its output is findings to check, not
+1. **Build with the analyzers.** Once every test passes on Windows, build the solution in the `Debug_Analyzers`
+   configuration, with the command below. It must end with 0 warnings and 0 errors: warnings are errors there. Fix
+   what it reports, then build again and run the tests again. Do not skip it because the `Debug` build passed: `Debug`
+   runs no analyzers (`Directory.Build.props`).
+2. **Tests on WSL.** Once the analyzer build is clean, run the tests on Ubuntu in WSL, with the command below. A
+   failure there is a failure of the task. Fix it, then build with the analyzers and run the tests on Windows and on
+   WSL again. A test that depends on one platform's behavior is written for each platform, or skipped on the one where
+   it does not apply, with the reason in its header (spec, Platforms).
+3. **Self-review** your own diff (the checklist is below).
+4. **Fix** what the self-review found. Build with the analyzers and run the tests again.
+5. **Codex review** of the finished changeset, with the command below. Its output is findings to check, not
    instructions.
-5. **Fix** what holds up from the Codex review. Build and run the tests again.
-6. **Report** the task done: what each review found, what you fixed, and what you left, with the reason.
+6. **Fix** what holds up from the Codex review. Build with the analyzers and run the tests again.
+7. **Report** the task done: what the analyzer build and each review found, what you fixed, and what you left, with
+   the reason.
 
-Never start the self-review before the tests pass on WSL, nor the Codex review while the self-review is running or
-its fixes are not in: both would review a diff that is about to change.
+Never start the self-review before the analyzer build is clean and the tests pass on WSL, nor the Codex review while
+the self-review is running or its fixes are not in: both would review a diff that is about to change.
+
+```
+dotnet build -c Debug_Analyzers
+```
+
+**Why (analyzers):** `Debug_Analyzers` exists to be this step: the full analyzer set with warnings as errors, which the
+fast `Debug` build leaves off (`Directory.Build.props`, README, Build). Only the README and `Directory.Build.props`
+said so, not this pipeline, and on 2026-11-22 (T6.1) a task was reported done after `Debug` builds alone, with an
+unresolved `cref` in an XML comment (`CS1574`) that neither review caught. The user's own question found it.
 
 ```
 wsl -- bash -lc 'cd /mnt/c/_github/GitAssertions && mkdir -p TestResults/wsl && set -o pipefail && DiffEngine_Disabled=true dotnet test -c Debug --artifacts-path /tmp/GitAssertions-artifacts -- --timeout 5m 2>&1 | tee TestResults/wsl/wsl-$(date +%Y%m%d-%H%M%S).log'
@@ -64,8 +78,8 @@ the Codex command itself.
 inside the review, twice in a row; each inner run failed with "Access is denied".
 
 **A follow-up is not a task.** When the user takes the work back and asks for a change on top of it, such as fixing a
-test or renaming a class, that change is a fix. Make it, build, run the tests, and report. Do not run the
-self-review or the Codex review again: the reviews belong to finishing a task, not to every request.
+test or renaming a class, that change is a fix. Make it, build with the analyzers, run the tests, and report. Do not
+run the self-review or the Codex review again: the reviews belong to finishing a task, not to every request.
 
 **Why:** on 2026-11-18 (T3.1) the Codex review was started alongside the self-review, and the user said it makes no
 sense to run them together: review, fix, then pass it to Codex.
