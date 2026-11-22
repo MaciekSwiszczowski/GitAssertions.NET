@@ -1,0 +1,23 @@
+﻿git status --porcelain --untracked-files=all:
+git ls-files -i -c --exclude-standard:
+  bin/app.dll
+  bin/keep.txt
+---
+IsHealthy: False
+Results (5):
+  NoUntrackedFiles: IsHealthy True, Files (0):
+  NoUnstagedChanges: IsHealthy True, Files (0):
+  NoConflicts: IsHealthy True, Files (0):
+  NoOperationInProgress: IsHealthy True, Files (0):
+  NoTrackedIgnoredFiles: IsHealthy False, Files (2):
+    bin/app.dll
+    bin/keep.txt
+Failures (1):
+  NoTrackedIgnoredFiles
+Message:
+1 of 5 Git checks failed.
+
+NoTrackedIgnoredFiles: 1 tracked path matches ignore rules.
+  bin/ (2 files)
+Fix (the files stay on disk), then commit:
+  git rm -r --cached -- bin/

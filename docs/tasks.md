@@ -172,7 +172,7 @@ The git CLI sets up the scenarios libgit2 cannot create, and checks what libgit2
     git commit -m "Normalize line endings"
     unix2dos windows.txt
     ```
-- [ ] **T5.3 Ignore rules against real Git.** Script scenarios (`tests/GitAssertions.Tests/Scripts`, one `ScriptTests.<Name>.script.txt` and its `.verified.txt` each), whose RunAll result agrees with git's own answer in the same verified file (T5.5). Write each verified file by hand from the spec first. A result that disagrees with git is a finding: report it and decide with Maciek before the library changes.
+- [x] **T5.3 Ignore rules against real Git.** Script scenarios (`tests/GitAssertions.Tests/Scripts`, one `ScriptTests.<Name>.script.txt` and its `.verified.txt` each), whose RunAll result agrees with git's own answer in the same verified file (T5.5). Write each verified file by hand from the spec first. A result that disagrees with git is a finding: report it and decide with Maciek before the library changes.
   - A file committed before its ignore rule was added fails NoTrackedIgnoredFiles.
   - A file force-added with `git add -f` fails NoTrackedIgnoredFiles.
   - A tracked `bin/` folder, then `bin/` ignored, fails with the folder grouped (`bin/ (<k> files)`), as the spec's template shows.
@@ -199,7 +199,49 @@ Small tasks, one commit each, so that no message misleads: each one names a stat
 
 - [ ] **T6.1 Multi-commit cherry-pick and revert.** libgit2 reports `CherryPickSequence` and `RevertSequence`, which T3.5 prints with the generic message. Map them to `cherry-pick` and `revert`, with the same Fix lines. Tests with real Git only, because libgit2 has no sequencer: `git cherry-pick A B` and `git revert A B`, each with a conflict in the first commit.
 - [ ] **T6.2 Bisect.** libgit2 reports `Bisect`, which T3.5 prints with the generic message. Name it, with the fix `git bisect reset`; write its message template in the spec first. Test with real Git only, because libgit2 has no bisect: `git bisect start`, `git bisect bad`, `git bisect good <commit>`.
-- [ ] **T6.3 Operations stopped without a conflict.** `git merge --no-commit` reports `Merge`, and an interactive rebase stopped at an `edit` step reports `RebaseInteractive`. T3.5's Fix line, "once all conflicts are resolved and staged", misleads when there was no conflict: reword it in the spec, then update T3.5's verified files to match. Tests: `merge --no-commit` in-process (`MergeOptions.CommitOnSuccess = false`); the `edit` stop with real Git only, because libgit2 has no interactive rebase.
+- [ ] **T6.3 Operations stopped without a conflict.** An operation can stop with no conflict: `git merge --no-commit` stops before the merge commit and reports `Merge`; an interactive rebase stops at an `edit` step, or after an `--exec` command fails, and reports `RebaseInteractive`. T3.5's Fix line, "once all conflicts are resolved and staged", then tells the reader to resolve conflicts that do not exist. The commands after it stay right.
+  - Decided: one wording for every operation, "all" becomes "any": `Fix: once any conflicts are resolved and staged, run:`. The check does not tell the two cases apart, because the state cannot: a merge reports `Merge` with or without a conflict, and a rebase stopped on a conflict reports `RebaseInteractive`, the same as one stopped without. Nothing is lost when there are conflicts: NoConflicts' own block in the `RunAll` message already says to resolve them and run `git add`.
+  - Change the template and the example in the spec (NoOperationInProgress) first, then the code, then every verified file that holds the old line: T3.5's, and the `Merge_conflict` script's.
+  - Test `merge --no-commit` in-process, with `MergeOptions.CommitOnSuccess = false`. The branches must have diverged: a fast-forward makes no merge commit, so nothing is left in progress.
+  - Test the rebase stop with a script, because libgit2 has no interactive rebase. Use a failing `--exec`, not an `edit` step: an `edit` step needs an edited todo list, and the script runner sets `GIT_SEQUENCE_EDITOR=true`, which overrides any `-c sequence.editor` a script line could pass. Measured on git 2.56.0 and 2.34.1: both stop with exit code 1 (the script runner logs it and goes on), leave `.git/rebase-merge/interactive`, which libgit2 reports as `RebaseInteractive`, and both git commands print nothing. The rebase stops even when the branch already sits on `main`'s tip.
+
+    ```text
+    # A rebase whose --exec command fails stops after the commit, with no conflict, and leaves the rebase open.
+    git init
+    echo one a.txt
+    git add a.txt
+    git commit -m "Add a.txt"
+    git switch -c feature
+    echo two b.txt
+    git add b.txt
+    git commit -m "Add b.txt"
+    git rebase -x "exit 1" main
+    ```
+
+    The verified file, written by hand first:
+
+    ```text
+    git status --porcelain --untracked-files=all:
+    git ls-files -i -c --exclude-standard:
+    ---
+    IsHealthy: False
+    Results (5):
+      NoUntrackedFiles: IsHealthy True, Files (0):
+      NoUnstagedChanges: IsHealthy True, Files (0):
+      NoConflicts: IsHealthy True, Files (0):
+      NoOperationInProgress: IsHealthy False, Files (0):
+      NoTrackedIgnoredFiles: IsHealthy True, Files (0):
+    Failures (1):
+      NoOperationInProgress
+    Message:
+    1 of 5 Git checks failed.
+
+    NoOperationInProgress: a rebase is in progress.
+    Fix: once any conflicts are resolved and staged, run:
+      git rebase --continue
+    Or abort it:
+      git rebase --abort
+    ```
 - [ ] **T6.4 Aborted operation passes.** Tests first: a conflicting rebase aborted with LibGit2Sharp's `Rebase.Abort()` passes NoOperationInProgress, and so does a conflicting merge aborted with `git merge --abort` (real Git, because LibGit2Sharp has no merge abort).
 - [ ] **T6.5 Unborn HEAD.** A repository with no commits passes every check and RunAll. NoConflicts has this scenario already; add it, on `TempRepo.CreateUnborn`, to NoUntrackedFiles, NoUnstagedChanges, NoOperationInProgress, NoTrackedIgnoredFiles, and RunAll.
 - [ ] **T6.6 Intent-to-add.** A file recorded with `git add -N` is reported as `modified` and offered `git restore`, which empties it, because the index holds it with no content. Choose first among:

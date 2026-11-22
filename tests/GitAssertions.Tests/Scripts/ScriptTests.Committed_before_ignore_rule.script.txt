@@ -1,0 +1,9 @@
+# A file is committed, and the ignore rule that matches it is added afterwards. A rule hides only files git does not
+# track, so debug.log stays tracked, and both git ls-files -i and NoTrackedIgnoredFiles list it.
+git init
+echo log debug.log
+git add debug.log
+git commit -m "Add debug.log"
+echo *.log .gitignore
+git add .gitignore
+git commit -m "Ignore logs"

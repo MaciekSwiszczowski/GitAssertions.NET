@@ -1,0 +1,13 @@
+# A project and its bin/ build output are committed, and bin/ is ignored afterwards. Every tracked file under bin/ is
+# ignored, and bin/ is ignored itself, so NoTrackedIgnoredFiles lists the folder as one entry, with its file count.
+# Program.cs, which no rule matches, is not mentioned.
+git init
+echo code Program.cs
+echo dll bin/Debug/app.dll
+echo pdb bin/Debug/app.pdb
+echo dll bin/Release/app.dll
+git add Program.cs bin
+git commit -m "Add the project and its build output"
+echo bin/ .gitignore
+git add .gitignore
+git commit -m "Ignore bin/"

@@ -1,0 +1,15 @@
+# The fix NoTrackedIgnoredFiles offers: a file and a folder that were committed before their rules are removed from
+# the index with git rm -r --cached, which leaves them on disk, and the removal is committed. They are ignored and
+# untracked now, which is what ignore rules are for, so git and RunAll find nothing.
+git init
+echo log debug.log
+echo dll bin/app.dll
+echo dll bin/lib.dll
+git add debug.log bin
+git commit -m "Add the log and the build output"
+echo *.log .gitignore
+append bin/ .gitignore
+git add .gitignore
+git commit -m "Ignore logs and bin/"
+git rm -r --cached -- bin/ debug.log
+git commit -m "Stop tracking ignored files"

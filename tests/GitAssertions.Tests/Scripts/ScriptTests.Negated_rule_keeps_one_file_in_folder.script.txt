@@ -1,0 +1,12 @@
+# bin/keep.txt and bin/app.dll are committed, then bin/* and !bin/keep.txt are added and committed. The first rule
+# matches what is inside bin/, not bin/ itself, so keep.txt can be brought back: git ls-files -i lists bin/app.dll
+# only. NoTrackedIgnoredFiles lists it alone, not as bin/, because the folder holds a tracked file it does not report.
+git init
+echo txt bin/keep.txt
+echo dll bin/app.dll
+git add bin
+git commit -m "Add bin"
+echo bin/* .gitignore
+append !bin/keep.txt .gitignore
+git add .gitignore
+git commit -m "Ignore the contents of bin/ except keep.txt"

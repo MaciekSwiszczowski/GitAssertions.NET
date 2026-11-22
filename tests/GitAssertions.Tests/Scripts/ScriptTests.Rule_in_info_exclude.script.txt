@@ -1,0 +1,7 @@
+# The ignore rule sits only in .git/info/exclude, the ignore file of this clone alone, and no .gitignore holds it. The
+# file was committed before the rule, so git ls-files -i --exclude-standard and NoTrackedIgnoredFiles list it.
+git init
+echo log debug.log
+git add debug.log
+git commit -m "Add debug.log"
+echo *.log .git/info/exclude

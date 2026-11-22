@@ -1,0 +1,10 @@
+# The ignore rule sits only in the file that core.excludesFile names, a user's own ignore file for every repository.
+# The path is relative, because a script cannot know where its folder is. git resolves a relative path against the
+# top of the working tree, from any folder of it, and libgit2 finds the file too, although the test process runs in
+# another folder.
+git init
+echo log debug.log
+git add debug.log
+git commit -m "Add debug.log"
+echo *.log .git/global-excludes
+git config core.excludesFile .git/global-excludes

@@ -1,0 +1,9 @@
+# A file that a committed rule ignores is forced in with git add -f, and committed. It is tracked although the rule
+# matches it, so git ls-files -i and NoTrackedIgnoredFiles list it.
+git init
+echo *.log .gitignore
+git add .gitignore
+git commit -m "Ignore logs"
+echo log debug.log
+git add -f debug.log
+git commit -m "Force-add debug.log"

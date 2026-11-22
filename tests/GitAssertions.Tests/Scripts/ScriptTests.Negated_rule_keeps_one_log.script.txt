@@ -1,0 +1,11 @@
+# Two logs are committed, then *.log and !keep.log are added and committed. The negated rule brings keep.log back, so
+# git ls-files -i lists debug.log only, and so does NoTrackedIgnoredFiles.
+git init
+echo log debug.log
+echo log keep.log
+git add debug.log keep.log
+git commit -m "Add the logs"
+echo *.log .gitignore
+append !keep.log .gitignore
+git add .gitignore
+git commit -m "Ignore logs except keep.log"

@@ -1,0 +1,12 @@
+# The same files, then bin/ and !bin/keep.txt. bin/ is ignored itself, and a file cannot be brought back when its
+# folder is ignored (https://git-scm.com/docs/gitignore), so git ls-files -i lists both files, and NoTrackedIgnoredFiles
+# lists the folder as one entry. The classic trap: !bin/keep.txt looks as if it keeps the file, and it does not.
+git init
+echo txt bin/keep.txt
+echo dll bin/app.dll
+git add bin
+git commit -m "Add bin"
+echo bin/ .gitignore
+append !bin/keep.txt .gitignore
+git add .gitignore
+git commit -m "Ignore bin/ except keep.txt"
