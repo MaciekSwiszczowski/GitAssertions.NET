@@ -17,4 +17,16 @@ namespace GitAssertions;
 internal static class LineBreak
 {
     public const string Lf = "\n";
+
+    /// <summary>
+    /// A carriage return on its own, for text that holds one on every system, such as a file a test writes to see
+    /// that a tool leaves it alone.
+    /// </summary>
+    public const string Cr = "\r";
+
+    /// <summary>
+    /// A CRLF line break, for text that holds it on every system, such as a Windows-style file a test writes on Linux,
+    /// where <see cref="Environment.NewLine"/> is <see cref="Lf"/>.
+    /// </summary>
+    public const string CrLf = Cr + Lf;
 }

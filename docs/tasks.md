@@ -135,7 +135,26 @@ The git CLI sets up the scenarios libgit2 cannot create, and checks what libgit2
   - Git versions differ: on the development machine, Windows has git 2.56 and WSL has 2.34, and each CI runner has its own (CI prints `git --version`). Git's answer for the common cases has not changed in years; the known exceptions are line endings and ignore-rule corner cases, which T5.2 and T5.3 test. If two git versions print different blocks for one script, one verified file cannot match both. That is a finding too, decided with Maciek, for example a minimum git version for that script, or the newest git as the reference. Never scrub git's block, and never skip the script.
   - Update AGENTS.md's script-scenario rule (the verified file holds git's block and the RunAll result, both written by hand first), and the summaries of `ScriptTests` and `VerifyScript`.
   - Proof: green on Windows and on Ubuntu (WSL), two git versions apart, and on the three CI legs.
-- [ ] **T5.2 Line endings against real Git.** The NoUnstagedChanges autocrlf scenarios, set up with git, give the same result as `git status`.
+- [x] **T5.6 Script instructions for spaces, more lines, and line endings (do it before T5.2).** `echo <content> <path>` writes one word and an LF, which cannot express a CRLF file (T5.2), an attribute line such as `* text=auto`, or a second ignore rule. Extend the script's own instructions, run in-process as `echo` is: no shell and nothing to install on a build machine. Real shell syntax (`>`, `>>`, globbing) was considered and rejected: it would change the existing scripts and invite shell expectations the parser does not meet.
+  - `echo "<text>" <path>`: content in double quotes may hold spaces, such as `echo "* text=auto" .gitattributes`. Unquoted content stays one word, as now. Quoted content cannot hold a double quote.
+  - `append <content> <path>`: adds the content and an LF to the end of the file, creating the file and its folders if needed. Content may be quoted, as for `echo`. Example: `echo bin/* .gitignore`, then `append !bin/keep.txt .gitignore`.
+  - `unix2dos <path>` and `dos2unix <path>`: rewrite the file with every line break as CRLF, or as LF, and nothing else changed; the names are the well-known tools', but the conversion runs in-process. The file is always rewritten, even when it already has those line breaks, so it gets a new write time, as a file saved unchanged does. A missing file is an error.
+  - A malformed line (an unclosed quote, a missing path, an unknown instruction) throws `InvalidOperationException` naming the script and the line, as now.
+  - Tests first, value tests in `GitScriptTests`: quoted content with spaces is written as one line; `append` adds a line to an existing file and creates a missing one; `unix2dos` and `dos2unix` convert every line break; each malformed line throws naming its line. The existing scripts and their verified files do not change.
+  - Update the summary of `GitScript` and the instruction list in AGENTS.md's script-scenario rule.
+- [ ] **T5.2 Line endings against real Git (after T5.6).** Script scenarios, as in T5.3, that mirror the two NoUnstagedChanges autocrlf unit tests with real git. Git's own answer in the verified file (T5.5) shows whether `git status` agrees; a disagreement is a finding: report it and decide with Maciek before the library changes.
+  - A file committed with `core.autocrlf=true` from CRLF content, then rewritten with LF, fails NoUnstagedChanges as modified, as `NoUnstagedChanges_LineEndingsChangedWithAutoCrlf_FailsAsModified` does. Measured with Git for Windows 2.56.0: `git status` lists the file as modified, because its size no longer matches the size git cached, although `git diff` prints no change.
+
+    ```text
+    git init
+    git config core.autocrlf true
+    echo line windows.txt
+    unix2dos windows.txt
+    git add windows.txt
+    git commit -m "Add windows.txt"
+    dos2unix windows.txt
+    ```
+  - The same file saved unchanged, ending in `unix2dos windows.txt` instead of `dos2unix`, is healthy, as `NoUnstagedChanges_CrlfFileSavedUnchangedWithAutoCrlf_IsHealthy` is: git reads the file again and compares it with its CRLF turned back into LF.
 - [ ] **T5.3 Ignore rules against real Git.** Script scenarios (`tests/GitAssertions.Tests/Scripts`, one `ScriptTests.<Name>.script.txt` and its `.verified.txt` each), whose RunAll result agrees with git's own answer in the same verified file (T5.5). Write each verified file by hand from the spec first. A result that disagrees with git is a finding: report it and decide with Maciek before the library changes.
   - A file committed before its ignore rule was added fails NoTrackedIgnoredFiles.
   - A file force-added with `git add -f` fails NoTrackedIgnoredFiles.

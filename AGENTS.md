@@ -104,8 +104,13 @@ Every test that runs a check ends in a `CheckResultSnapshot` call and asserts no
   `RunAll.IsHealthy.verified.txt`. Each result is one line with its files below it, and its own message is left out:
   the check's tests pin it, and the `RunAll` message repeats every failing one.
 - Script scenarios are the exception to the shared healthy file. In `tests/GitAssertions.Tests/Scripts`, each
-  `ScriptTests.<Name>.script.txt` builds a repository with the real git CLI, one line at a time (`git <arguments>`,
-  `echo <content> <path>`, `#` comments; see `GitScript`), and `ScriptTests.<Name>.verified.txt` beside it holds git's
+  `ScriptTests.<Name>.script.txt` builds a repository with the real git CLI, one line at a time (see `GitScript`):
+  `git <arguments>`; `echo <content> <path>`, which writes the content and an LF to the file; `append <content> <path>`,
+  which adds the content and an LF to its end; `unix2dos <path>` and `dos2unix <path>`, which rewrite the file with
+  every line break as CRLF, or as LF; and `#` comments. Everything but `git` runs in-process, so there is no shell:
+  `>`, `>>` and globbing mean nothing, and `bin/*` is just a word. A word with spaces goes in double quotes
+  (`echo "* text=auto" .gitattributes`); quoted content cannot hold a double quote, and a malformed line throws
+  naming the script and the line. `ScriptTests.<Name>.verified.txt` beside it holds git's
   own answer about the finished repository (`git status --porcelain --untracked-files=all` and
   `git ls-files -i -c --exclude-standard`, each command on a line ending in `:`, then each line git printed, indented
   by two spaces), a line of `---`, then the `RunAll` result, healthy or failing. The `---` keeps a command that printed
@@ -144,3 +149,22 @@ files.Where(file => file.StartsWith(prefix));           // captures prefix, so i
 make it capture, so it can never quietly start allocating a closure. The rule is IDE0320, configured at warning in
 `.editorconfig`, but the SDK build does not run it (checked on SDK 11.0.100): only Rider's inspection reports it. So
 the build will not catch a miss, and it stays a review step.
+
+## Write line breaks with the constants, never as `"\n"`
+
+Never write `"\n"`, `'\n'`, or `"\r\n"` in C# code. Pick by what the text is for:
+
+- Content of a file, or a string, that must hold one particular line break on every system: the constants in
+  `src/GitAssertions/LineBreak.cs`, `LineBreak.Lf`, `LineBreak.Cr`, and `LineBreak.CrLf`. In a test class, alias the
+  ones you need (`private const string CrLf = LineBreak.CrLf;`) and build the content with constant interpolation,
+  which `[InlineData]` accepts: `$"one{Lf}two{CrLf}three{Lf}"`.
+- Text for a person on the current system, such as what a test writes to its output: `Environment.NewLine`.
+
+```csharp
+await File.WriteAllTextAsync(path, $"line{CrLf}", cancellation);   // a file that must be CRLF on Linux too
+output.WriteLine($"{command}{Environment.NewLine}exit code {code}");   // output for the reader
+```
+
+**Why:** `Environment.NewLine` is LF on Linux, so a test of CRLF handling that used it would pin different bytes on each
+system. A literal says nothing about which break the test means and is easy to get wrong in one place. The constants
+say it by name, and the compiler checks the spelling (2026-11-22, T5.6).
