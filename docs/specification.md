@@ -74,8 +74,8 @@ Each check's "Fix" below is the suggestion printed in its failure message, not s
    - Fix: resolve the conflicts in the file, then `git add <file>`, which also stages a deletion when the resolution was to delete it; then finish the operation (see NoOperationInProgress).
    - Tests: clean repo passes; repository with no commits passes; merge of two branches editing the same line fails and lists the file; conflict resolved and staged passes; delete/modify conflict fails; add/add conflict (both branches created the same file) fails; binary-file conflict fails.
 5. **NoOperationInProgress**: no unfinished merge, rebase, cherry-pick, revert, or bisect. Detect with `repo.Info.CurrentOperation`.
-   - Fix: `git <operation> --continue` once conflicts are resolved, or `git <operation> --abort`, where `<operation>` is merge, rebase, cherry-pick, or revert; `git bisect reset` for a bisect.
-   - Tests: clean repo passes; conflicting merge left open fails and names "merge"; conflicting rebase left open fails and names "rebase"; conflicting cherry-pick left open fails and names "cherry-pick"; conflicting revert left open fails and names "revert"; a cherry-pick or revert of several commits fails and names "cherry-pick" or "revert"; a bisect fails and names "bisect"; `git merge --no-commit` and an interactive rebase stopped at `edit` each fail and name the operation *(later)*; an aborted operation passes *(later)*; a repository with no commits passes *(later)*.
+   - Fix: `git <operation> --continue` once any conflicts are resolved and staged (an operation can stop with none), or `git <operation> --abort`, where `<operation>` is merge, rebase, cherry-pick, or revert; `git bisect reset` for a bisect.
+   - Tests: clean repo passes; conflicting merge left open fails and names "merge"; conflicting rebase left open fails and names "rebase"; conflicting cherry-pick left open fails and names "cherry-pick"; conflicting revert left open fails and names "revert"; a cherry-pick or revert of several commits fails and names "cherry-pick" or "revert"; a bisect fails and names "bisect"; a merge stopped before its commit (`git merge --no-commit`) fails and names "merge"; a rebase stopped with no conflict, after a failing `--exec` command, fails and names "rebase" (an `edit` step leaves the same state, and needs an edited list of rebase steps, which the script runner cannot pass); an aborted operation passes *(later)*; a repository with no commits passes *(later)*.
 6. **NotDetachedHead**: HEAD points to a branch. Detect with `repo.Info.IsHeadDetached`.
    - Fix: `git switch <branch>` (create one with `git switch -c` if the commits must be kept).
    - Tests: on a branch passes; checkout of a commit SHA fails and the message shows the SHA; fresh repo with no commits (unborn HEAD) passes.
@@ -214,7 +214,7 @@ No entries; `Files` is empty even on failure. `<operation>` is `merge`, `rebase`
 
 ```text
 NoOperationInProgress: a <operation> is in progress.
-Fix: once all conflicts are resolved and staged, run:
+Fix: once any conflicts are resolved and staged, run:
   git <operation> --continue
 Or abort it:
   git <operation> --abort
@@ -224,11 +224,13 @@ Example:
 
 ```text
 NoOperationInProgress: a merge is in progress.
-Fix: once all conflicts are resolved and staged, run:
+Fix: once any conflicts are resolved and staged, run:
   git merge --continue
 Or abort it:
   git merge --abort
 ```
+
+An operation can also stop with no conflict: `git merge --no-commit` stops before the merge commit, and an interactive rebase stops at an `edit` step or after an `--exec` command fails. The check cannot tell the two cases apart, because the state does not: a merge is `Merge` with a conflict or without one, and a rebase stopped on a conflict is `RebaseInteractive`, the same as one stopped without. So every operation has one wording, "once any conflicts are resolved and staged", which is true in both cases, and the commands after it fit both. When there are conflicts, NoConflicts' own block in the `RunAll` message already says to resolve them and to run `git add`.
 
 A bisect, `git bisect start` and every step after it until `git bisect reset`, is named as a bisect. It checks out a commit of its own and keeps its state in the repository until `git bisect reset` ends it and returns to the branch or commit where it started, so that command is the only fix; the message names no file. It is not an operation that stopped on a conflict, so the Fix line does not mention conflicts.
 

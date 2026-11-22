@@ -4,16 +4,18 @@ namespace GitAssertions.Tests;
 
 /// <summary>
 /// Pins <see cref="GitAssert.NoOperationInProgress"/> against real repositories (docs/specification.md, Checks,
-/// NoOperationInProgress): a merge, rebase, cherry-pick, or revert that stopped on a conflict and was neither finished
-/// nor aborted fails the check, and the message names the operation and its own <c>--continue</c> and <c>--abort</c>
-/// commands. Every conflict here is set up with LibGit2Sharp, which leaves the operation in progress as Git does. A
-/// cherry-pick or revert of several commits and a bisect are not set up here: libgit2 has no sequencer and no bisect,
-/// so the scripts <c>Cherry_pick_sequence_conflict</c>, <c>Revert_sequence_conflict</c>, and <c>Bisect_in_progress</c>
-/// (<see cref="Scripts.ScriptTests"/>) build them with real Git; a bisect has its own message, with
-/// <c>git bisect reset</c>. Any other operation uses the generic message and is not tested in v1: libgit2 cannot set
-/// up a <c>git am</c>, and Git's state files are never written by hand (docs/specification.md, Test tooling). Every
-/// test is a snapshot test with no other assertion: a reviewed <c>.verified.txt</c> file beside this class holds the
-/// whole result, rule, health, files, and message. A failing scenario ends in
+/// NoOperationInProgress): a merge, rebase, cherry-pick, or revert that stopped, on a conflict or without one, and was
+/// neither finished nor aborted fails the check, and the message names the operation and its own <c>--continue</c> and
+/// <c>--abort</c> commands. Every operation here is set up with LibGit2Sharp, which leaves it in progress as Git does:
+/// each stops on a conflict, except a merge that stops before its commit (<c>git merge --no-commit</c>). A
+/// cherry-pick or revert of several commits, a rebase stopped without a conflict, and a bisect are not set up here:
+/// libgit2 has no sequencer, no interactive rebase, and no bisect, so the scripts
+/// <c>Cherry_pick_sequence_conflict</c>, <c>Revert_sequence_conflict</c>, <c>Rebase_exec_fails</c>, and
+/// <c>Bisect_in_progress</c> (<see cref="Scripts.ScriptTests"/>) build them with real Git; a bisect has its own
+/// message, with <c>git bisect reset</c>. Any other operation uses the generic message and is not tested in v1:
+/// libgit2 cannot set up a <c>git am</c>, and Git's state files are never written by hand (docs/specification.md,
+/// Test tooling). Every test is a snapshot test with no other assertion: a reviewed <c>.verified.txt</c> file beside
+/// this class holds the whole result, rule, health, files, and message. A failing scenario ends in
 /// <see cref="CheckResultSnapshot.Verify(CheckResult, string)"/> and has a file of its own; the healthy one ends in
 /// <see cref="CheckResultSnapshot.VerifyHealthy(string, CheckResult, string)"/> and shares
 /// NoOperationInProgress.IsHealthy.verified.txt.
@@ -108,6 +110,32 @@ public sealed class NoOperationInProgressTests
         repo.AddFile(TempRepo.InitialFile, $"first{Lf}").Stage(TempRepo.InitialFile).Commit("Edit first")
             .AddFile(TempRepo.InitialFile, $"second{Lf}").Stage(TempRepo.InitialFile).Commit("Edit second")
             .Revert("HEAD~1");
+
+        // Act
+        CheckResult result = GitAssert.Open(repo.Root).NoOperationInProgress();
+
+        // Assert
+        await CheckResultSnapshot.Verify(result);
+    }
+
+    // Trigger: A feature branch and main each add a file of their own, and merging the feature branch stops before
+    //          the merge commit, as git merge --no-commit does; there is no conflict, and nobody commits or aborts it.
+    // Behavior: The check fails and names the merge, and its Fix line does not tell the reader to resolve conflicts
+    //           that do not exist: it says "once any conflicts are resolved and staged", with the same two commands.
+    // Assertion: The snapshot's message names "a merge" and "once any conflicts", with git merge --continue and
+    //            git merge --abort, and Files is empty.
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
+    public async Task NoOperationInProgress_MergeStoppedBeforeCommit_FailsAsMerge()
+    {
+        // Arrange
+        const string featureFile = "feature.txt";
+        const string mainFile = "main.txt";
+        using TempRepo repo = TempRepo.Create();
+        repo.Diverge(
+                Feature,
+                onFeature: static branch => branch.AddFile(featureFile).Stage(featureFile),
+                onMain: static branch => branch.AddFile(mainFile).Stage(mainFile))
+            .MergeWithoutCommit(Feature);
 
         // Act
         CheckResult result = GitAssert.Open(repo.Root).NoOperationInProgress();

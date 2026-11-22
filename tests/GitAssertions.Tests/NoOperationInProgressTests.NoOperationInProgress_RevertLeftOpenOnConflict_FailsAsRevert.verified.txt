@@ -3,7 +3,7 @@ IsHealthy: False
 Files (0):
 Message:
 NoOperationInProgress: a revert is in progress.
-Fix: once all conflicts are resolved and staged, run:
+Fix: once any conflicts are resolved and staged, run:
   git revert --continue
 Or abort it:
   git revert --abort

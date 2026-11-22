@@ -5,7 +5,10 @@ namespace GitAssertions;
 /// <summary>
 /// The NoOperationInProgress check (docs/specification.md, Checks): fails while a merge, rebase, cherry-pick, or revert
 /// is stopped halfway, which <c>git status</c> reports as "You have unmerged paths" or "rebase in progress", or while a
-/// bisect is left open ("You are currently bisecting"). It reads what libgit2 reports as the current operation, which
+/// bisect is left open ("You are currently bisecting"). The operation need not have stopped on a conflict: a merge
+/// stopped before its commit (<c>git merge --no-commit</c>) and a rebase stopped at an <c>edit</c> step or after a
+/// failing <c>--exec</c> command are in progress too, and the Fix line says "any conflicts", since libgit2 reports the
+/// same operation with a conflict and without one. It reads what libgit2 reports as the current operation, which
 /// Git keeps in state files such as <c>MERGE_HEAD</c> and <c>rebase-merge/</c> until the operation is finished or
 /// aborted, and a bisect's until <c>git bisect reset</c>, even after it has found the first bad commit. The failure
 /// lists no file: the operation belongs to the repository, not to a path. It reads an open repository:
@@ -55,7 +58,7 @@ internal static class NoOperationInProgressCheck
             entries: [],
             [
                 FixStep.WithCommand(
-                    "Fix: once all conflicts are resolved and staged, run:",
+                    "Fix: once any conflicts are resolved and staged, run:",
                     $"git {command} --continue"),
                 FixStep.WithCommand("Or abort it:", $"git {command} --abort"),
             ],

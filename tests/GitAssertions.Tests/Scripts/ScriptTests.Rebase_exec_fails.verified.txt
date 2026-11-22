@@ -1,0 +1,20 @@
+﻿git status --porcelain --untracked-files=all:
+git ls-files -i -c --exclude-standard:
+---
+IsHealthy: False
+Results (5):
+  NoUntrackedFiles: IsHealthy True, Files (0):
+  NoUnstagedChanges: IsHealthy True, Files (0):
+  NoConflicts: IsHealthy True, Files (0):
+  NoOperationInProgress: IsHealthy False, Files (0):
+  NoTrackedIgnoredFiles: IsHealthy True, Files (0):
+Failures (1):
+  NoOperationInProgress
+Message:
+1 of 5 Git checks failed.
+
+NoOperationInProgress: a rebase is in progress.
+Fix: once any conflicts are resolved and staged, run:
+  git rebase --continue
+Or abort it:
+  git rebase --abort

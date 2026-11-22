@@ -1,0 +1,9 @@
+﻿Rule: NoOperationInProgress
+IsHealthy: False
+Files (0):
+Message:
+NoOperationInProgress: a merge is in progress.
+Fix: once any conflicts are resolved and staged, run:
+  git merge --continue
+Or abort it:
+  git merge --abort

@@ -106,12 +106,13 @@ public sealed class GitAssert
     }
 
     /// <summary>
-    /// Checks that no merge, rebase, cherry-pick, or revert is left stopped halfway: such an operation stops on a
-    /// conflict and stays in progress until <c>git &lt;operation&gt; --continue</c> finishes it or <c>--abort</c> gives
-    /// it up. The failure names the operation and the two commands; it lists no file, because the operation belongs to
-    /// the repository, not to a path. A bisect left open fails too, and <c>git bisect reset</c> ends it. Any other
-    /// operation libgit2 reports, such as <c>git am</c>, fails with a generic message that names it as libgit2 does and
-    /// points to <c>git status</c>.
+    /// Checks that no merge, rebase, cherry-pick, or revert is left stopped halfway: such an operation stops, usually
+    /// on a conflict, and stays in progress until <c>git &lt;operation&gt; --continue</c> finishes it or <c>--abort</c>
+    /// gives it up. A merge stopped before its commit, or a rebase stopped at an <c>edit</c> step, has no conflict and
+    /// fails too. The failure names the operation and the two commands; it lists no file, because the operation
+    /// belongs to the repository, not to a path. A bisect left open fails too, and <c>git bisect reset</c> ends it.
+    /// Any other operation libgit2 reports, such as <c>git am</c>, fails with a generic message that names it as
+    /// libgit2 does and points to <c>git status</c>.
     /// </summary>
     /// <exception cref="InvalidOperationException">
     /// The repository cannot be read, for example because its folder was deleted after <see cref="Open"/>.

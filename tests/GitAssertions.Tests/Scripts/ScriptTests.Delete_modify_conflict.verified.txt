@@ -22,7 +22,7 @@ Fix: resolve the conflicts in each file, then run:
   git add -- readme.txt
 
 NoOperationInProgress: a merge is in progress.
-Fix: once all conflicts are resolved and staged, run:
+Fix: once any conflicts are resolved and staged, run:
   git merge --continue
 Or abort it:
   git merge --abort

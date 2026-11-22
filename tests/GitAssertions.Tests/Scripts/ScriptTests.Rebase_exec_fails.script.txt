@@ -1,0 +1,13 @@
+# A rebase whose --exec command fails stops after the commit, with no conflict, and leaves the rebase open.
+# git exits with code 1 there, which the script runner logs and goes on from. An edit step would stop the same way,
+# but it needs an edited list of rebase steps, and the runner sets GIT_SEQUENCE_EDITOR=true, which no line of a script
+# overrides.
+git init
+echo one a.txt
+git add a.txt
+git commit -m "Add a.txt"
+git switch -c feature
+echo two b.txt
+git add b.txt
+git commit -m "Add b.txt"
+git rebase -x "exit 1" main

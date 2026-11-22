@@ -120,6 +120,17 @@ internal sealed class TempRepo : IDisposable
     }
 
     /// <summary>
+    /// Merges <paramref name="branch"/> into the checked-out branch and stops before the merge commit, like
+    /// <c>git merge --no-commit</c>: the merged files are staged and the merge is in progress, with no conflict. The
+    /// branches must have diverged: like Git, a fast-forward makes no merge commit, so nothing is left in progress.
+    /// </summary>
+    public TempRepo MergeWithoutCommit(string branch)
+    {
+        Repo.Merge(Repo.Branches[branch], NextSignature(), new MergeOptions { CommitOnSuccess = false });
+        return this;
+    }
+
+    /// <summary>
     /// Commits <paramref name="onFeature"/>'s change on a new branch <paramref name="branch"/> and
     /// <paramref name="onMain"/>'s change on <see cref="MainBranch"/>, both starting from the commit HEAD is on, and
     /// leaves <see cref="MainBranch"/> checked out: work done in parallel that is about to be brought together.
