@@ -1,0 +1,13 @@
+# One branch deletes readme.txt, the other edits it; git merge stops and lists the file as deleted by them.
+git init
+echo base readme.txt
+echo keep keep.txt
+git add readme.txt keep.txt
+git commit -m "Add readme and keep"
+git switch -c feature
+git rm readme.txt
+git commit -m "Remove readme on feature"
+git switch main
+echo main readme.txt
+git commit -am "Change readme on main"
+git merge feature

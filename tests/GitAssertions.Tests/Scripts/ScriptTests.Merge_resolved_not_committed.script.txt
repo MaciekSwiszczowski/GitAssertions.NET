@@ -1,0 +1,14 @@
+# The conflict of Merge_conflict, resolved and staged but never committed: no conflict is left, the merge still is.
+git init
+echo base readme.txt
+git add readme.txt
+git commit -m "Add readme"
+git switch -c feature
+echo feature readme.txt
+git commit -am "Change readme on feature"
+git switch main
+echo main readme.txt
+git commit -am "Change readme on main"
+git merge feature
+echo resolved readme.txt
+git add readme.txt

@@ -1,0 +1,10 @@
+# Reverting the second change of readme.txt after a third one changed the same line; git stops and leaves the revert open.
+git init
+echo base readme.txt
+git add readme.txt
+git commit -m "Add readme"
+echo second readme.txt
+git commit -am "Change readme to second"
+echo third readme.txt
+git commit -am "Change readme to third"
+git revert HEAD~1

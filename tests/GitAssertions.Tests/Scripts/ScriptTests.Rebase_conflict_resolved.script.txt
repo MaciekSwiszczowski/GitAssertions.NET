@@ -1,0 +1,16 @@
+# The conflict of Rebase_conflict, resolved, staged, and the rebase continued: nothing is left behind.
+git init
+echo base readme.txt
+git add readme.txt
+git commit -m "Add readme"
+git switch -c feature
+echo feature readme.txt
+git commit -am "Change readme on feature"
+git switch main
+echo main readme.txt
+git commit -am "Change readme on main"
+git switch feature
+git rebase main
+echo resolved readme.txt
+git add readme.txt
+git rebase --continue

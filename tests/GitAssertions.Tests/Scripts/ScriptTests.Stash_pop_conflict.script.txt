@@ -1,0 +1,10 @@
+# git stash pop onto a changed line leaves the file conflicted and no operation in progress.
+git init
+echo base readme.txt
+git add readme.txt
+git commit -m "Add readme"
+echo stashed readme.txt
+git stash
+echo committed readme.txt
+git commit -am "Change readme"
+git stash pop

@@ -1,0 +1,13 @@
+# The same conflict as Rebase_conflict, rebased with the apply backend: it leaves .git/rebase-apply/ instead.
+git init
+echo base readme.txt
+git add readme.txt
+git commit -m "Add readme"
+git switch -c feature
+echo feature readme.txt
+git commit -am "Change readme on feature"
+git switch main
+echo main readme.txt
+git commit -am "Change readme on main"
+git switch feature
+git rebase --apply main

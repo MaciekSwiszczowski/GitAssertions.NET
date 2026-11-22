@@ -1,0 +1,28 @@
+﻿git status --porcelain --untracked-files=all:
+  UD readme.txt
+git ls-files -i -c --exclude-standard:
+---
+IsHealthy: False
+Results (5):
+  NoUntrackedFiles: IsHealthy True, Files (0):
+  NoUnstagedChanges: IsHealthy True, Files (0):
+  NoConflicts: IsHealthy False, Files (1):
+    readme.txt
+  NoOperationInProgress: IsHealthy False, Files (0):
+  NoTrackedIgnoredFiles: IsHealthy True, Files (0):
+Failures (2):
+  NoConflicts
+  NoOperationInProgress
+Message:
+2 of 5 Git checks failed.
+
+NoConflicts: 1 file has unresolved conflicts.
+  conflicted: readme.txt
+Fix: resolve the conflicts in each file, then run:
+  git add -- readme.txt
+
+NoOperationInProgress: a merge is in progress.
+Fix: once all conflicts are resolved and staged, run:
+  git merge --continue
+Or abort it:
+  git merge --abort

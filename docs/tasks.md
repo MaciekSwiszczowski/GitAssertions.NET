@@ -183,7 +183,7 @@ The git CLI sets up the scenarios libgit2 cannot create, and checks what libgit2
     - `debug.log` and `keep.log` tracked, then `*.log` and `!keep.log`: `git ls-files -i -c --exclude-standard` lists `debug.log` only, so the check lists `debug.log` alone (mirrors `NoTrackedIgnoredFiles_FileBroughtBackByNegatedRule_IsHealthy`, with a second file that stays ignored).
     - `bin/keep.txt` and `bin/app.dll` tracked, then `bin/*` and `!bin/keep.txt`: git lists `bin/app.dll` only. The check lists it alone, not grouped, because `bin/` holds a tracked file it does not report (mirrors `NoTrackedIgnoredFiles_FolderContentsIgnoredButOneFileKept_ListsOnlyTheIgnoredFile`).
     - The same files, then `bin/` and `!bin/keep.txt`: git lists both, because a file cannot be brought back when its folder is ignored (gitignore documentation). The check lists the folder grouped, `bin/ (2 files)`. This is the classic trap, and the likeliest place for libgit2 to bring the file back where git does not.
-- [ ] **T5.4 Operations left in progress by real Git.** Script scenarios, as in T5.3, of operations an agent stops halfway, and of their ends. The conflicting `git merge` is there already (`ScriptTests.Merge_conflict`).
+- [x] **T5.4 Operations left in progress by real Git.** Script scenarios, as in T5.3, of operations an agent stops halfway, and of their ends. The conflicting `git merge` is there already (`ScriptTests.Merge_conflict`).
   - A conflicting `git rebase` fails NoConflicts and NoOperationInProgress, with the rebase Fix lines.
   - A conflicting `git rebase --apply` fails the same way. Each kind of rebase leaves a different state, and the check maps all three to `rebase` (measured with Git for Windows 2.56.0): a plain `git rebase` leaves `.git/rebase-merge/` with an `interactive` file, which libgit2 reports as `RebaseInteractive`; `--apply` leaves `.git/rebase-apply/`, reported as `Rebase`; LibGit2Sharp's own rebase, in the unit tests, gives `RebaseMerge`. With this scenario, every rebase state the check maps is tested.
   - The same rebase resolved (`echo`, `git add`, `git rebase --continue`) ends healthy: the "broken, then fixed" story.
@@ -244,12 +244,32 @@ Small tasks, one commit each, so that no message misleads: each one names a stat
     ```
 - [ ] **T6.4 Aborted operation passes.** Tests first: a conflicting rebase aborted with LibGit2Sharp's `Rebase.Abort()` passes NoOperationInProgress, and so does a conflicting merge aborted with `git merge --abort` (real Git, because LibGit2Sharp has no merge abort).
 - [ ] **T6.5 Unborn HEAD.** A repository with no commits passes every check and RunAll. NoConflicts has this scenario already; add it, on `TempRepo.CreateUnborn`, to NoUntrackedFiles, NoUnstagedChanges, NoOperationInProgress, NoTrackedIgnoredFiles, and RunAll.
-- [ ] **T6.6 Intent-to-add.** A file recorded with `git add -N` is reported as `modified` and offered `git restore`, which empties it, because the index holds it with no content. Choose first among:
-  - (a) a kind of its own, `new (intent to add)`, offered `git add` only and no discard line; this needs fix commands that take only some entries' paths (recommended);
-  - (b) `modified` as now, but without the discard line for it;
-  - (c) leave it as it is.
+- [ ] **T6.6 Intent-to-add.** A file recorded with `git add -N` is reported as `modified` and offered `git restore`, which empties it, because the index holds it with no content. Measured on git 2.56.0: `git status --porcelain` prints ` A notes.txt`, and `git status` lists it as `new file` under "Changes not staged for commit"; `git commit` refuses with "no changes added to commit"; `git add -- notes.txt` stages it (`A `); `git restore -- notes.txt` exits 0 and leaves the file empty, still ` A`, so the check keeps failing after the advice destroyed the work.
+  - Decided: a kind of its own, `new (intent to add)`, offered `git add` and no discard line. It matches git's ` A` and "new file", so a script's git block and its `RunAll` result tell the same story.
+  - Fix lines take only some entries' paths: `git add` lists every entry, `git restore` lists every entry but the intent-to-add ones, and the discard line is left out when no path is left for it. Write the template and an example in the spec (NoUnstagedChanges) first:
 
-  LibGit2Sharp does not expose the intent-to-add flag, so the file is recognized by its state: not in HEAD, the empty blob in the index, and modified in the working tree. In-process tests stage the empty blob, which libgit2 reads as it reads a real `git add -N`; one test uses the real `git add -N`.
+    ```text
+    NoUnstagedChanges: 2 files have unstaged changes.
+      modified: readme.txt
+      new (intent to add): notes.txt
+    Fix:
+      git add -- readme.txt notes.txt
+    Or discard the changes:
+      git restore -- readme.txt
+    ```
+
+    ```text
+    NoUnstagedChanges: 1 file has unstaged changes.
+      new (intent to add): notes.txt
+    Fix:
+      git add -- notes.txt
+    ```
+
+  - Remove the limitation where it is stated: the README's list of what `NoUnstagedChanges` does not support yet, the spec's sentence that intent-to-add is not supported in v1, and its entry in the spec's list of later features. Add the kind to the spec's entry kinds of NoUnstagedChanges.
+  - LibGit2Sharp does not expose the intent-to-add flag, so the file is recognized by its state: not in HEAD, the empty blob in the index, and changed in the working tree. In-process tests stage the empty blob, which libgit2 reads as it reads a real `git add -N`.
+  - The same state comes from an empty file staged with a plain `git add` and written afterwards. Measured: git prints `AM notes.txt`, and `git restore` empties that file too. It gets the same kind and the same advice: dropping the discard line protects it as well, and the name is the one inaccuracy, accepted.
+  - Known gap, accepted: an empty file recorded with `git add -N` matches the empty blob in the index, so nothing marks it as changed. Git prints ` A empty.txt` (measured); the library cannot tell it from an empty file staged with `git add`, which is healthy, and passes it. No content can be lost. Pin it in a script whose `#` comment names the gap, so the disagreement in its verified file is a recorded decision, not a finding.
+  - Tests with real Git, as scripts: one file recorded with `git add -N` (no discard line); the same file next to a tracked file that was edited (the discard line lists only the edited file); and the empty-file gap above.
 
 ## Phase 7: Security
 

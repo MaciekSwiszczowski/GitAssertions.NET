@@ -1,0 +1,14 @@
+# Both branches change the same line of readme.txt; git rebase stops on the conflict and leaves the rebase open.
+# A plain git rebase uses the merge backend: .git/rebase-merge/ with an interactive file.
+git init
+echo base readme.txt
+git add readme.txt
+git commit -m "Add readme"
+git switch -c feature
+echo feature readme.txt
+git commit -am "Change readme on feature"
+git switch main
+echo main readme.txt
+git commit -am "Change readme on main"
+git switch feature
+git rebase main

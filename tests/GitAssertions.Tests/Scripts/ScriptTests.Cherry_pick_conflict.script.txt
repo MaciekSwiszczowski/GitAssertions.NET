@@ -1,0 +1,12 @@
+# Cherry-picking the one commit of feature changes the line main changed too; git stops and leaves the pick open.
+git init
+echo base readme.txt
+git add readme.txt
+git commit -m "Add readme"
+git switch -c feature
+echo feature readme.txt
+git commit -am "Change readme on feature"
+git switch main
+echo main readme.txt
+git commit -am "Change readme on main"
+git cherry-pick feature
