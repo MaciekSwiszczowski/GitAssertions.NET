@@ -1,0 +1,13 @@
+# A KNOWN GAP, accepted: an empty file recorded with git add -N. Git prints " A" for it, but the index holds the empty
+# blob and the file on disk is that same blob, so nothing marks it as changed and the library passes it. No content can
+# be lost, and it cannot be told from an empty file staged with a plain git add, which is healthy. The disagreement
+# between git's block and the RunAll result below is this recorded decision, not a finding.
+# A script cannot write an empty file (echo adds an LF), so the file is emptied the way git restore empties an
+# intent-to-add file, which leaves exactly the state git add -N of an empty file does.
+git init
+echo base readme.txt
+git add readme.txt
+git commit -m "Add readme"
+echo notes empty.txt
+git add -N empty.txt
+git restore -- empty.txt

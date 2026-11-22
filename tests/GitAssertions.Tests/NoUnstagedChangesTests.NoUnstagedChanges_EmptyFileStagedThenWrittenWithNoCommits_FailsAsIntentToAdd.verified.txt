@@ -1,0 +1,9 @@
+﻿Rule: NoUnstagedChanges
+IsHealthy: False
+Files (1):
+  notes.txt
+Message:
+NoUnstagedChanges: 1 file has unstaged changes.
+  new (intent to add): notes.txt
+Fix:
+  git add -- notes.txt

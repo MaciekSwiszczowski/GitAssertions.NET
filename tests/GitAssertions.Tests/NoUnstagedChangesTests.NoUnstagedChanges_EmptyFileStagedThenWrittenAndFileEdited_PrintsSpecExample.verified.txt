@@ -1,0 +1,13 @@
+﻿Rule: NoUnstagedChanges
+IsHealthy: False
+Files (2):
+  notes.txt
+  readme.txt
+Message:
+NoUnstagedChanges: 2 files have unstaged changes.
+  modified: readme.txt
+  new (intent to add): notes.txt
+Fix:
+  git add -- readme.txt notes.txt
+Or discard the changes:
+  git restore -- readme.txt

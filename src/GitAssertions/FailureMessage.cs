@@ -6,8 +6,9 @@ namespace GitAssertions;
 /// <summary>
 /// Prints a failing check's message in the spec's common format (docs/specification.md, Failure messages, Common
 /// format), so every check reads the same way: the rule line; the entries, sorted ordinally by their whole line and
-/// at most <see cref="ListedEntryLimit"/> of them; then the fix blocks, whose commands name exactly the listed
-/// entries. Lines are joined by <see cref="LineBreak.Lf"/>, with no line break at the end.
+/// at most <see cref="ListedEntryLimit"/> of them; then the fix blocks, whose commands name the listed entries they
+/// are right for (<see cref="FixStep.TakesEntry"/>), every one unless the step says otherwise. Lines are joined by
+/// <see cref="LineBreak.Lf"/>, with no line break at the end.
 /// </summary>
 internal static class FailureMessage
 {
@@ -32,10 +33,10 @@ internal static class FailureMessage
     {
         // Sorted by the whole line, kind first, so the entries of one kind stay together; the commands take the
         // paths in this same order.
-        (string Line, IReadOnlyList<string> Paths)[] listed =
+        (string Line, FailureEntry Entry)[] listed =
         [
             .. entries
-                .Select(static entry => (Line: EntryLine(entry), entry.Paths))
+                .Select(static entry => (Line: EntryLine(entry), Entry: entry))
                 .OrderBy(static entry => entry.Line, StringComparer.Ordinal)
                 .Take(ListedEntryLimit),
         ];
@@ -51,13 +52,30 @@ internal static class FailureMessage
                 $"{Indent}...and {unlisted} more. Run the check again after fixing these."));
         }
 
-        string commandPaths = string.Join(' ', listed.SelectMany(static entry => entry.Paths).Select(QuoteForCommand));
         foreach (FixStep fix in fixes)
         {
-            lines.Add(fix.Label);
-            if (fix.Command is not null)
+            if (!fix.TakesPaths)
             {
-                lines.Add(fix.TakesPaths ? $"{Indent}{fix.Command} -- {commandPaths}" : Indent + fix.Command);
+                lines.Add(fix.Label);
+                if (fix.Command is not null)
+                {
+                    lines.Add(Indent + fix.Command);
+                }
+
+                continue;
+            }
+
+            // A command takes the paths of the listed entries it is right for. With none left it is not printed at
+            // all, label included: a label over no command would offer a fix that does nothing.
+            string commandPaths = string.Join(
+                ' ',
+                listed.Where(entry => fix.TakesEntry(entry.Entry))
+                    .SelectMany(static entry => entry.Entry.Paths)
+                    .Select(QuoteForCommand));
+            if (commandPaths.Length > 0)
+            {
+                lines.Add(fix.Label);
+                lines.Add($"{Indent}{fix.Command} -- {commandPaths}");
             }
         }
 

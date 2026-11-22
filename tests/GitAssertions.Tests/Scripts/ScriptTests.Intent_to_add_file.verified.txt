@@ -1,0 +1,21 @@
+﻿git status --porcelain --untracked-files=all:
+   A notes.txt
+git ls-files -i -c --exclude-standard:
+---
+IsHealthy: False
+Results (5):
+  NoUntrackedFiles: IsHealthy True, Files (0):
+  NoUnstagedChanges: IsHealthy False, Files (1):
+    notes.txt
+  NoConflicts: IsHealthy True, Files (0):
+  NoOperationInProgress: IsHealthy True, Files (0):
+  NoTrackedIgnoredFiles: IsHealthy True, Files (0):
+Failures (1):
+  NoUnstagedChanges
+Message:
+1 of 5 Git checks failed.
+
+NoUnstagedChanges: 1 file has unstaged changes.
+  new (intent to add): notes.txt
+Fix:
+  git add -- notes.txt

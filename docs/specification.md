@@ -11,7 +11,7 @@ The library is **read-only**. It inspects the repository and reports what it fin
 Version 1 is a two-day build done with agents. Everything else comes later, in the phases after it in [tasks.md](tasks.md): integration tests with real Git, accurate messages, security, release preparation, and nice-to-have features.
 
 - **Version 1:** NoUntrackedFiles, NoUnstagedChanges, NoConflicts, NoOperationInProgress, NoTrackedIgnoredFiles, and a plain RunAll with no options (no check can be turned off). Unit tests use LibGit2Sharp only, so every v1 scenario is set up in-process.
-- **Later:** a name of its own in NoOperationInProgress for the rarest operation left (`git am`), a `typechange` entry kind for NoUnstagedChanges (a tracked file replaced by another type, such as a symlink), an intent-to-add kind for NoUnstagedChanges (a file recorded with `git add -N`, which gets `git add` and no discard line), NoMixedStaging (a narrower check than NoUnstagedChanges, which also reports a file changed again after it was staged; its own method, left out of the default `RunAll` so no file prints twice), NotDetachedHead, OnExpectedBranch, NoStaleIndexLock, configuration (enabling and disabling checks, allow-lists, expected branch), the CliWrap real-Git integration tests, and NuGet packaging. Use a project reference until then.
+- **Later:** a name of its own in NoOperationInProgress for the rarest operation left (`git am`), a `typechange` entry kind for NoUnstagedChanges (a tracked file replaced by another type, such as a symlink), NoMixedStaging (a narrower check than NoUnstagedChanges, which also reports a file changed again after it was staged; its own method, left out of the default `RunAll` so no file prints twice), NotDetachedHead, OnExpectedBranch, NoStaleIndexLock, configuration (enabling and disabling checks, allow-lists, expected branch), the CliWrap real-Git integration tests, and NuGet packaging. Use a project reference until then.
 
 Test scenarios that depend on a later feature (allow-listed paths, disabled checks, verification against the real git CLI) are marked *(later)* below and are not part of v1.
 
@@ -64,9 +64,9 @@ Each check's "Fix" below is the suggestion printed in its failure message, not s
 1. **NoUntrackedFiles**: no untracked files that aren't ignored. Detect with `FileStatus.NewInWorkdir`.
    - Fix: `git add` the files if they belong, or delete them, or add them to .gitignore.
    - Tests: clean repo passes; new file in root fails and lists its path; new file in a nested untracked folder fails and lists the file (not just the folder); file matching .gitignore passes; empty folders pass; edits, deletes, and staged new files pass (NoUnstagedChanges reports the edits and deletes); a file moved without `git mv` lists its new path, as `git status` does; allow-listed path passes *(later)*.
-2. **NoUnstagedChanges**: no modified or deleted files left unstaged. Detect with `ModifiedInWorkdir`, `DeletedFromWorkdir`. The check reports what `git status` reports, so a file moved without `git mv` is its old path, deleted (its new path is untracked, for NoUntrackedFiles), and a change of line endings only is reported when `git status` reports it. A tracked file replaced by another type, such as a symlink, which `git status` prints as `typechange`, is not reported in v1 (later). A file recorded with `git add -N` (intent to add) is not supported in v1 (later): it is reported as `modified`, and the `git restore` line offered for it would empty the file, because the index holds it with no content.
-   - Fix: `git add <file>` to stage the change, or `git restore <file>` to discard it.
-   - Tests: clean repo passes; edited tracked file fails; deleted tracked file fails; a file moved without `git mv` lists the old path as deleted; a file staged and then edited again fails as modified (`MM`, `AM`), and one staged and then deleted fails as deleted (`AD`); line-ending-only change with autocrlf set behaves as documented (set up with LibGit2Sharp in v1; checked against the real git CLI *(later)*); file mode change on Windows does not fail; an unresolved conflict passes (NoConflicts reports it).
+2. **NoUnstagedChanges**: no modified or deleted files left unstaged. Detect with `ModifiedInWorkdir`, `DeletedFromWorkdir`. The check reports what `git status` reports, so a file moved without `git mv` is its old path, deleted (its new path is untracked, for NoUntrackedFiles), and a change of line endings only is reported when `git status` reports it. A tracked file replaced by another type, such as a symlink, which `git status` prints as `typechange`, is not reported in v1 (later). A file recorded with `git add -N` (intent to add), which `git status` prints as ` A` and lists as `new file`, is a kind of its own, `new (intent to add)`. LibGit2Sharp does not expose the intent-to-add flag, so the file is recognized by its state: not in HEAD, the empty blob in the index, and changed in the working tree. An empty file staged with a plain `git add` and written afterwards (`AM`) has the same state, and gets the same kind. A known gap, accepted: an empty file recorded with `git add -N` matches the empty blob in the index, so nothing marks it as changed, and the check passes it where `git status` prints ` A`; no content can be lost.
+   - Fix: `git add <file>` to stage the change, or `git restore <file>` to discard it. `git restore` is not offered for an intent-to-add file: the index holds it with no content, so `git restore` would empty it and leave it ` A`.
+   - Tests: clean repo passes; edited tracked file fails; deleted tracked file fails; a file moved without `git mv` lists the old path as deleted; a file staged and then edited again fails as modified (`MM`, `AM`), and one staged and then deleted fails as deleted (`AD`); line-ending-only change with autocrlf set behaves as documented (set up with LibGit2Sharp in v1; checked against the real git CLI *(later)*); file mode change on Windows does not fail; an unresolved conflict passes (NoConflicts reports it); a file recorded with `git add -N` fails as `new (intent to add)` and is offered `git add` and no `git restore` (real Git, as a script); the same file next to an edited tracked file is listed with it, and `git restore` names only the edited file (real Git, as a script); an empty file staged and then written fails as `new (intent to add)` too, also in a repository with no commits; a committed empty file that was written fails as `modified` and is still offered `git restore`, because HEAD holds it; an empty file recorded with `git add -N` passes, the known gap above (real Git, as a script, with the disagreement between git's block and the `RunAll` result recorded in its comment).
 3. **NoMixedStaging** *(later)*: no file both staged and changed again. Narrower than NoUnstagedChanges, which reports these files too, and the only check for someone who keeps other unstaged edits on purpose. Called on its own, not part of the default `RunAll`.
    - Fix: `git add <file>` to stage the latest version, then commit.
    - Tests: staged-only file passes this check; unstaged-only file passes this check; staged then edited again fails; staged then deleted from disk fails.
@@ -135,6 +135,7 @@ Or <alternative description>:
 - **Limit:** at most 20 entries. When there are more, the 21st line is `  ...and <n> more. Run the check again after fixing these.` `CheckResult.Files` still holds every offending path. Path length and total message size are capped too (see [Output limits](#output-limits)).
 - **`Fix:`** one command line, indented two spaces, that fixes exactly the listed entries when run from the repository root. Paths are separated from options with `--`.
 - **`Or ...:`** zero or more alternatives, each with its own command line, or a plain sentence when there is no single command (e.g. editing .gitignore).
+- **Paths per command:** a command takes the paths of the listed entries it is right for, in entry order. Most take every entry; one that is wrong for a kind of entry leaves those out (`git restore` in NoUnstagedChanges leaves out the intent-to-add entries), and a command with no path left is left out with its label line.
 - **Quoting:** a path goes into a command only if it is *shell-safe* (see [Shell-safe paths](#shell-safe-paths)). A shell-safe path is wrapped in double quotes when it contains anything other than ASCII letters and digits, `.`, `_`, `-`, and `/`, e.g. `"docs/my notes.md"` or `"docs/café.md"`. Inside double quotes, the allowed characters are literal in bash, PowerShell, and cmd.
 - **Unsafe paths:** a path that isn't shell-safe is still listed as an entry, in escaped form, but is left out of every command. After the commands, the message adds `Not included in the commands above because the path contains characters that are unsafe in a shell; handle it by hand:` followed by each such path, escaped and indented two spaces. If no listed path is shell-safe, the command lines are omitted and only this note is printed.
 - **Line endings:** `\n` between lines, no trailing newline.
@@ -167,7 +168,7 @@ Or ignore them: add the paths to .gitignore.
 
 ### NoUnstagedChanges
 
-Entry kinds: `modified`, `deleted`. There is no `renamed` kind: a file moved without `git mv` is listed as its old path, `deleted`.
+Entry kinds: `modified`, `deleted`, `new (intent to add)`. There is no `renamed` kind: a file moved without `git mv` is listed as its old path, `deleted`. `new (intent to add)` is a file recorded with `git add -N`, which Git holds with no content: it gets `git add`, and no `git restore`, which would empty the file and leave it unstaged still.
 
 ```text
 NoUnstagedChanges: <n> file(s) have unstaged changes.
@@ -177,6 +178,8 @@ Fix:
 Or discard the changes:
   git restore -- <paths>
 ```
+
+`git add` takes every listed path. `git restore` takes every listed path except the `new (intent to add)` ones, and the `Or discard the changes:` block is left out when no path is left for it.
 
 Example:
 
@@ -188,6 +191,27 @@ Fix:
   git add -- old.txt readme.txt
 Or discard the changes:
   git restore -- old.txt readme.txt
+```
+
+Example with a file recorded with `git add -N`:
+
+```text
+NoUnstagedChanges: 2 files have unstaged changes.
+  modified: readme.txt
+  new (intent to add): notes.txt
+Fix:
+  git add -- readme.txt notes.txt
+Or discard the changes:
+  git restore -- readme.txt
+```
+
+Example with only that file:
+
+```text
+NoUnstagedChanges: 1 file has unstaged changes.
+  new (intent to add): notes.txt
+Fix:
+  git add -- notes.txt
 ```
 
 ### NoConflicts

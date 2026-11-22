@@ -48,10 +48,9 @@ A failing check does not stop `RunAll`. A check that throws does: `RunAll` throw
 - With `core.autocrlf=true`, a file Git checked out with CRLF line endings and saved again unchanged is not a change. A file rewritten with only its line endings changed, CRLF to LF, is listed as modified, as `git status` lists it, although `git diff` shows nothing; `git add` clears it and stages nothing.
 - With `core.filemode=false`, which Git for Windows sets in every repository it creates or clones, a file committed as executable is not a change on a file system that has no executable bit.
 
-`NoUnstagedChanges` does not support these yet:
+A file recorded with `git add -N` (intent to add), which `git status` prints as ` A`, is listed as `new (intent to add)`. The message offers `git add` for it and no `git restore`, because Git holds the file with no content and `git restore` would empty it. An empty file recorded with `git add -N` is not reported: nothing in the repository marks it as changed, and no content can be lost.
 
-- A tracked file replaced by another type, such as a symlink, which `git status` prints as `typechange`: it is not reported.
-- A file recorded with `git add -N` (intent to add), which `git status` prints as ` A`: it is reported as `modified`, and the `git restore` line offered for it would empty the file, because Git holds it with no content. Use `git add` on it.
+`NoUnstagedChanges` does not support this yet: a tracked file replaced by another type, such as a symlink, which `git status` prints as `typechange`, is not reported.
 
 `NoConflicts` reads only what Git records: a conflict counts as resolved once `git add` has staged the file. It does not search files for conflict markers, so a file staged with `<<<<<<<` still in it passes. Markers left in code usually break the build, but not in a file nothing compiles or reads, such as Markdown.
 

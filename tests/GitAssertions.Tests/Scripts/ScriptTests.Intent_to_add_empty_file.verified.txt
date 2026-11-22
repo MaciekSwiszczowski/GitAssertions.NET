@@ -1,0 +1,14 @@
+﻿git status --porcelain --untracked-files=all:
+   A empty.txt
+git ls-files -i -c --exclude-standard:
+---
+IsHealthy: True
+Results (5):
+  NoUntrackedFiles: IsHealthy True, Files (0):
+  NoUnstagedChanges: IsHealthy True, Files (0):
+  NoConflicts: IsHealthy True, Files (0):
+  NoOperationInProgress: IsHealthy True, Files (0):
+  NoTrackedIgnoredFiles: IsHealthy True, Files (0):
+Failures (0):
+Message:
+All Git checks passed.

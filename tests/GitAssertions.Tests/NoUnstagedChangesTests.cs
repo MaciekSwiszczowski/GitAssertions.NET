@@ -6,7 +6,11 @@ namespace GitAssertions.Tests;
 /// Pins <see cref="GitAssert.NoUnstagedChanges"/> against real repositories (docs/specification.md, Checks,
 /// NoUnstagedChanges): a tracked file that differs from the index, edited or deleted, fails the check, a file staged
 /// and then changed again included; untracked and staged changes do not, and neither do the line-ending and
-/// file-mode differences git status leaves out. Every test is a snapshot test with no other assertion: a reviewed
+/// file-mode differences git status leaves out. A file recorded with <c>git add -N</c> (intent to add) is a kind of
+/// its own and is offered <c>git add</c> and no <c>git restore</c>; LibGit2Sharp cannot record one, so the tests here
+/// stage an empty file and then write it, which leaves the same state, and the scripts
+/// <c>Intent_to_add_file</c>, <c>Intent_to_add_next_to_edited_file</c> and <c>Intent_to_add_empty_file</c>
+/// (<see cref="Scripts.ScriptTests"/>) use real Git. Every test is a snapshot test with no other assertion: a reviewed
 /// <c>.verified.txt</c> file beside this class holds the whole result, rule, health, files, and message. A failing
 /// scenario ends in <see cref="CheckResultSnapshot.Verify(CheckResult, string)"/> and has a file of its own; every
 /// healthy one ends in <see cref="CheckResultSnapshot.VerifyHealthy(string, CheckResult, string)"/> and shares
@@ -178,6 +182,88 @@ public sealed class NoUnstagedChangesTests
         // Arrange
         using TempRepo repo = TempRepo.Create();
         repo.AddFile("new.txt").Stage("new.txt").Delete("new.txt");
+
+        // Act
+        CheckResult result = GitAssert.Open(repo.Root).NoUnstagedChanges();
+
+        // Assert
+        await CheckResultSnapshot.Verify(result);
+    }
+
+    // Trigger: An agent stages an empty notes.txt, then writes its content and does not stage that. The index holds the
+    //          empty file and HEAD has no notes.txt: the state git add -N leaves, which libgit2 reads the same way.
+    // Behavior: The check fails and names the file as new (intent to add), and offers git add alone: the index holds
+    //           the file with no content, so git restore would empty it.
+    // Assertion: The snapshot shows notes.txt in Files and a message with the Fix block and no discard block.
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
+    public async Task NoUnstagedChanges_EmptyFileStagedThenWritten_FailsAsIntentToAdd()
+    {
+        // Arrange
+        // The content differs in size from the empty file, so the write is a change whatever time the file system
+        // stamps on it. LibGit2Sharp cannot record git add -N, and a real one is the script Intent_to_add_file.
+        using TempRepo repo = TempRepo.Create();
+        repo.AddFile("notes.txt", string.Empty).Stage("notes.txt");
+        repo.AddFile("notes.txt", $"notes{Lf}");
+
+        // Act
+        CheckResult result = GitAssert.Open(repo.Root).NoUnstagedChanges();
+
+        // Assert
+        await CheckResultSnapshot.Verify(result);
+    }
+
+    // Trigger: An agent edits the tracked readme.txt, and stages an empty notes.txt and then writes its content, so the
+    //          working tree holds one edit and one file in the state git add -N leaves.
+    // Behavior: The check fails and prints exactly the spec's intent-to-add example: git add takes both paths, and
+    //           git restore only readme.txt, because restoring notes.txt would empty it.
+    // Assertion: The snapshot's message is the spec example character for character, modified before new.
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
+    public async Task NoUnstagedChanges_EmptyFileStagedThenWrittenAndFileEdited_PrintsSpecExample()
+    {
+        // Arrange
+        using TempRepo repo = TempRepo.Create();
+        repo.AddFile("notes.txt", string.Empty).Stage("notes.txt");
+        repo.AddFile("notes.txt", $"notes{Lf}").AddFile(TempRepo.InitialFile, $"changed{Lf}");
+
+        // Act
+        CheckResult result = GitAssert.Open(repo.Root).NoUnstagedChanges();
+
+        // Assert
+        await CheckResultSnapshot.Verify(result);
+    }
+
+    // Trigger: In a repository with no commits, an agent stages an empty notes.txt, then writes its content and does
+    //          not stage that, as git add -N notes.txt does before a first commit.
+    // Behavior: With no HEAD, no file is in HEAD, so the check fails and names the file as new (intent to add), with
+    //           git add alone.
+    // Assertion: The snapshot shows notes.txt in Files and a message with the Fix block and no discard block.
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
+    public async Task NoUnstagedChanges_EmptyFileStagedThenWrittenWithNoCommits_FailsAsIntentToAdd()
+    {
+        // Arrange
+        using TempRepo repo = TempRepo.CreateUnborn();
+        repo.AddFile("notes.txt", string.Empty).Stage("notes.txt");
+        repo.AddFile("notes.txt", $"notes{Lf}");
+
+        // Act
+        CheckResult result = GitAssert.Open(repo.Root).NoUnstagedChanges();
+
+        // Assert
+        await CheckResultSnapshot.Verify(result);
+    }
+
+    // Trigger: An agent commits an empty empty.txt, then writes content to it and does not stage that. The index holds
+    //          the empty file, as it does for an intent-to-add file, but HEAD holds it too.
+    // Behavior: The check fails and names the file as modified, and still offers git restore: it brings back the
+    //           committed empty file, which drops the written content, as a person who asks for a discard means.
+    // Assertion: The snapshot shows empty.txt as modified, with both the Fix and the discard block.
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
+    public async Task NoUnstagedChanges_EmptyCommittedFileWritten_FailsAsModified()
+    {
+        // Arrange
+        using TempRepo repo = TempRepo.Create();
+        repo.AddFile("empty.txt", string.Empty).Stage("empty.txt").Commit("Add empty.txt");
+        repo.AddFile("empty.txt", $"written{Lf}");
 
         // Act
         CheckResult result = GitAssert.Open(repo.Root).NoUnstagedChanges();

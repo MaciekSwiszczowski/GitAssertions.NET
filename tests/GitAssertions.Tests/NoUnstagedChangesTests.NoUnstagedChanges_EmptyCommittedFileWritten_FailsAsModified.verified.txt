@@ -1,0 +1,11 @@
+﻿Rule: NoUnstagedChanges
+IsHealthy: False
+Files (1):
+  empty.txt
+Message:
+NoUnstagedChanges: 1 file has unstaged changes.
+  modified: empty.txt
+Fix:
+  git add -- empty.txt
+Or discard the changes:
+  git restore -- empty.txt

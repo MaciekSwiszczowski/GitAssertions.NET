@@ -1,0 +1,9 @@
+# The same file recorded with git add -N, next to a tracked file that was edited: git add takes both paths, and git
+# restore only the edited one, because restoring the intent-to-add file would empty it.
+git init
+echo base readme.txt
+git add readme.txt
+git commit -m "Add readme"
+echo changed readme.txt
+echo notes notes.txt
+git add -N notes.txt

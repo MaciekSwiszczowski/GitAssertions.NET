@@ -1,0 +1,8 @@
+# A new file recorded with git add -N: git prints " A" and lists it as "new file" under "Changes not staged for commit".
+# Git holds it with no content, so git restore would empty it and leave it " A"; only git add is offered.
+git init
+echo base readme.txt
+git add readme.txt
+git commit -m "Add readme"
+echo notes notes.txt
+git add -N notes.txt
