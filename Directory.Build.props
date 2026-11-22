@@ -79,7 +79,7 @@
     <NoWarn>$(NoWarn);CS1591;VSTHRD111;VSTHRD200</NoWarn>
     <WarningsAsErrors>
       nullable;CS1998;CS4014;
-      AsyncFixer01;AsyncFixer02;
+      AsyncFixer01;AsyncFixer02;AsyncFixer03;
       VSTHRD100;VSTHRD110;
       IDE0005;IDE2000
     </WarningsAsErrors>
@@ -103,7 +103,7 @@
       CA2007;CA2012;CA2016;CA1849;
       VSTHRD100;VSTHRD103;VSTHRD110;VSTHRD200;
       MA0040;MA0041;MA0134;
-      AF0001;AF0004;
+      AsyncFixer01;AsyncFixer02;AsyncFixer03;
       CS1998;
       IDISP001;IDISP003;IDISP004;IDISP007
     </WarningsAsErrors>

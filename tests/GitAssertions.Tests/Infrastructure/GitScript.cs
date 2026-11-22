@@ -205,21 +205,17 @@ internal static class GitScript
         return [.. words];
     }
 
-    private static async Task WriteTextAsync(
+    private static Task WriteTextAsync(
         string workingDirectory, string relativePath, string content, bool append, CancellationToken cancellation)
     {
         string path = Path.Combine(workingDirectory, relativePath);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         string text = content + LineBreak.Lf;
 
-        if (append)
-        {
-            await File.AppendAllTextAsync(path, text, cancellation);
-        }
-        else
-        {
-            await File.WriteAllTextAsync(path, text, cancellation);
-        }
+        // AsyncFixer01: the only await would sit in one of two branches, so return the Task instead.
+        return append
+            ? File.AppendAllTextAsync(path, text, cancellation)
+            : File.WriteAllTextAsync(path, text, cancellation);
     }
 
     /// <summary>
