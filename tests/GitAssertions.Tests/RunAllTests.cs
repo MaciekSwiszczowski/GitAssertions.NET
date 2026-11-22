@@ -8,11 +8,12 @@ namespace GitAssertions.Tests;
 /// Pins <see cref="GitAssert.RunAll"/> (docs/specification.md, Public API and RunAll message): it runs the five checks
 /// one after another and reports every result, healthy ones included, and the failing ones again in
 /// <see cref="RunAllResult.Failures"/> and in one message. A failing check does not stop the checks after it. Each
-/// check's own scenarios are pinned by its own tests and are not repeated here. The two snapshot tests end in their
-/// snapshot with no other assertion: a reviewed <c>.verified.txt</c> file beside this class holds the whole result. The
-/// healthy one ends in <see cref="CheckResultSnapshot.VerifyHealthy(string, RunAllResult, string)"/> and shares
-/// RunAll.IsHealthy.verified.txt; the failing one has a file of its own. The two value tests pin what a snapshot cannot
-/// state: an exception passing through, and a result that cannot be changed after it is made.
+/// check's own scenarios are pinned by its own tests and are not repeated here, except that a repository with no
+/// commits is run through every check at once. The three snapshot tests end in their snapshot with no other assertion:
+/// a reviewed <c>.verified.txt</c> file beside this class holds the whole result. The healthy ones end in
+/// <see cref="CheckResultSnapshot.VerifyHealthy(string, RunAllResult, string)"/> and share
+/// RunAll.IsHealthy.verified.txt; the failing one has a file of its own. The two value tests pin what a snapshot
+/// cannot state: an exception passing through, and a result that cannot be changed after it is made.
 /// </summary>
 public sealed class RunAllTests
 {
@@ -25,6 +26,24 @@ public sealed class RunAllTests
     {
         // Arrange
         using TempRepo repo = TempRepo.Create();
+
+        // Act
+        RunAllResult result = GitAssert.Open(repo.Root).RunAll();
+
+        // Assert
+        await CheckResultSnapshot.VerifyHealthy(nameof(GitAssert.RunAll), result);
+    }
+
+    // Trigger: An agent works in a repository created with git init, before anything was committed.
+    // Behavior: A repository with no commits has no HEAD commit and no index file yet, and every check passes, so
+    //           RunAll is healthy and says so in one line.
+    // Assertion: The shared healthy snapshot: five healthy results in the spec's order, no failures, and the message
+    //            "All Git checks passed.".
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
+    public async Task RunAll_RepositoryWithNoCommits_IsHealthy()
+    {
+        // Arrange
+        using TempRepo repo = TempRepo.CreateUnborn();
 
         // Act
         RunAllResult result = GitAssert.Open(repo.Root).RunAll();

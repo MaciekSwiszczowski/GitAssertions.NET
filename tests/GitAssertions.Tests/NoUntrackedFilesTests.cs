@@ -29,6 +29,23 @@ public sealed class NoUntrackedFilesTests
         await CheckResultSnapshot.VerifyHealthy(nameof(GitAssert.NoUntrackedFiles), result);
     }
 
+    // Trigger: An agent works in a repository created with git init, before anything was committed.
+    // Behavior: A repository with no commits and no files has nothing untracked, and the check passes.
+    // Assertion: The shared healthy snapshot: a healthy result with no files and the message
+    //            "NoUntrackedFiles: OK.".
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
+    public async Task NoUntrackedFiles_RepositoryWithNoCommits_IsHealthy()
+    {
+        // Arrange
+        using TempRepo repo = TempRepo.CreateUnborn();
+
+        // Act
+        CheckResult result = GitAssert.Open(repo.Root).NoUntrackedFiles();
+
+        // Assert
+        await CheckResultSnapshot.VerifyHealthy(nameof(GitAssert.NoUntrackedFiles), result);
+    }
+
     // Trigger: An agent creates notes.txt in the repository root and never adds it.
     // Behavior: The check fails, names the file, and offers to add it, delete it, or ignore it.
     // Assertion: The snapshot shows notes.txt in Files and the one-file message, in the singular.

@@ -43,6 +43,23 @@ public sealed class NoOperationInProgressTests
         await CheckResultSnapshot.VerifyHealthy(nameof(GitAssert.NoOperationInProgress), result);
     }
 
+    // Trigger: An agent works in a repository created with git init, before anything was committed.
+    // Behavior: A repository with no commits has no operation in progress, and the check passes.
+    // Assertion: The shared healthy snapshot: a healthy result with no files and the message
+    //            "NoOperationInProgress: OK.".
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
+    public async Task NoOperationInProgress_RepositoryWithNoCommits_IsHealthy()
+    {
+        // Arrange
+        using TempRepo repo = TempRepo.CreateUnborn();
+
+        // Act
+        CheckResult result = GitAssert.Open(repo.Root).NoOperationInProgress();
+
+        // Assert
+        await CheckResultSnapshot.VerifyHealthy(nameof(GitAssert.NoOperationInProgress), result);
+    }
+
     // Trigger: A feature branch and main both change the same line of readme.txt, and merging the feature branch stops
     //          on the conflict; nobody finishes or aborts the merge.
     // Behavior: The check fails, names the merge, and offers git merge --continue once the conflicts are resolved and

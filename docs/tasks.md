@@ -20,7 +20,7 @@ Phase 9 holds nice-to-have features, picked up after 1.0 when they're needed. A 
 **Behavior tasks** (Phases 1 to 6, and any later task that adds or changes library or test-helper behavior):
 
 - Tests written first and seen failing.
-- All tests green locally and on GitHub Actions (once T0.3 exists).
+- All tests green locally, on Windows and on Ubuntu (WSL), and on GitHub Actions.
 - No leaked Repository handles (temp folders delete cleanly).
 - Failure message matches the spec's template for that check, including the copy-pasteable `Fix:` command (checks and RunAll only).
 
@@ -49,7 +49,7 @@ Each task: write the spec's v1 test scenarios as failing snapshot tests (skip th
 - [x] **T3.1 NoUntrackedFiles**, including nested folders and ignored files.
 - [x] **T3.2 NoUnstagedChanges**, including deletes, files changed again after staging, and the autocrlf and file-mode edge cases.
 - [x] **T3.4 NoConflicts**, including merge, delete/modify, add/add, and binary conflicts. Adds a merge helper to TempRepo.
-- [x] **T3.5 NoOperationInProgress**, covering a conflicting merge, rebase, cherry-pick, and revert. Any other operation gets the spec's generic message, which names libgit2's `CurrentOperation` value, and is not tested; Phase 6 names the rest one task at a time. Adds rebase, cherry-pick, and revert helpers to TempRepo.
+- [x] **T3.5 NoOperationInProgress**, covering a conflicting merge, rebase, cherry-pick, and revert. Any other operation gets the spec's generic message, which names libgit2's `CurrentOperation` value, and is not tested; Phase 6 names the rest one task at a time (`git am` moved to T9.7). Adds rebase, cherry-pick, and revert helpers to TempRepo.
 - [x] **T3.6 NoTrackedIgnoredFiles**, covering files committed before the ignore rule, force-added files, bin/obj grouping (only a folder that is itself ignored and holds no tracked file the check does not report), and negated rules.
 
 ## Phase 4: RunAll
@@ -106,14 +106,14 @@ The git CLI sets up the scenarios libgit2 cannot create, and checks what libgit2
     - `GIT_CONFIG_NOSYSTEM=1`, `GIT_CONFIG_GLOBAL` set to the null device (`NUL` on Windows, `/dev/null` elsewhere), and `GIT_ATTR_NOSYSTEM=1`: the CLI's version of `LibGit2Isolation`;
     - `XDG_CONFIG_HOME` set to an empty folder, because `GIT_CONFIG_GLOBAL` does not cover the user's global ignore and attributes files (`git/ignore` and `git/attributes` under `$XDG_CONFIG_HOME`, or under `~/.config`), and a global ignore rule changes what `git status` reports;
     - `GIT_TERMINAL_PROMPT=0`, so git never asks for credentials;
-    - `GIT_EDITOR=true` and `GIT_SEQUENCE_EDITOR=true`, so `git commit` without `-m` or `git rebase -i` never waits for an editor, which on Windows can open a window on the user's desktop. A test that needs an edited rebase todo list sets its own `GIT_SEQUENCE_EDITOR`;
+    - `GIT_EDITOR=true` and `GIT_SEQUENCE_EDITOR=true`, so `git commit` without `-m` or `git rebase -i` never waits for an editor, which on Windows can open a window on the user's desktop. No call can set its own `GIT_SEQUENCE_EDITOR`, so no test can edit a rebase todo list (T6.3 stops a rebase with a failing `--exec` instead);
     - `GIT_OPTIONAL_LOCKS=0`, because `git status` otherwise rewrites the index;
     - a fixed author and committer, with names, emails, and dates (`GIT_AUTHOR_*` and `GIT_COMMITTER_*`), so a commit is the same on every machine.
   - Config values for every git call:
     - `gc.auto=0` and `maintenance.auto=false`, so no background maintenance starts;
     - `core.fsmonitor=false`, because the fsmonitor process outlives git and keeps the temp folder locked;
     - `init.defaultBranch=main` and `commit.gpgsign=false`, so `git init` and `git commit` behave the same on every machine and git version.
-- [x] **T5.5 Git's own answer in script snapshots (do it before T5.2 to T5.4).** Today a script's verified file holds only the RunAll result, so whether git agrees is checked by hand, once, by whoever writes the file, with the git on their machine. Phase 5 exists to check libgit2 against real Git, so after RunAll, `ScriptTests` asks git the same questions about the same folder, and the verified file holds git's answer above the RunAll result.
+- [x] **T5.5 Git's own answer in script snapshots (do it before T5.2 to T5.4).** Before this task, a script's verified file held only the RunAll result, so whether git agrees is checked by hand, once, by whoever writes the file, with the git on their machine. Phase 5 exists to check libgit2 against real Git, so after RunAll, `ScriptTests` asks git the same questions about the same folder, and the verified file holds git's answer above the RunAll result.
   - Two commands, both run through `GitCli.RunAsync` after RunAll, so a failing command fails the test:
     - `git status --porcelain --untracked-files=all` shows untracked files (`??`), unstaged changes (`M` or `D` in the second column), and conflicts (unmerged lines such as `UU`, `AA`, `DU`, `UD`). `--untracked-files=all` lists untracked files one by one, as NoUntrackedFiles does. Porcelain v1, because git guarantees that its format does not change between git versions or with user config, and it is never translated, unlike plain `git status`.
     - `git ls-files -i -c --exclude-standard` shows tracked files that match an ignore rule, which `git status` does not show (NoTrackedIgnoredFiles).
@@ -243,7 +243,7 @@ Small tasks, one commit each, so that no message misleads: each one names a stat
       git rebase --abort
     ```
 - [x] **T6.4 Aborted operation passes.** Tests first: a conflicting rebase aborted with LibGit2Sharp's `Rebase.Abort()` passes NoOperationInProgress, and so does a conflicting merge aborted with `git merge --abort` (real Git, because LibGit2Sharp has no merge abort).
-- [ ] **T6.5 Unborn HEAD.** A repository with no commits passes every check and RunAll. NoConflicts has this scenario already; add it, on `TempRepo.CreateUnborn`, to NoUntrackedFiles, NoUnstagedChanges, NoOperationInProgress, NoTrackedIgnoredFiles, and RunAll.
+- [x] **T6.5 Unborn HEAD.** A repository with no commits passes every check and RunAll. NoConflicts has this scenario already; add it, on `TempRepo.CreateUnborn`, to NoUntrackedFiles, NoUnstagedChanges, NoOperationInProgress, NoTrackedIgnoredFiles, and RunAll.
 - [x] **T6.6 Intent-to-add.** A file recorded with `git add -N` is reported as `modified` and offered `git restore`, which empties it, because the index holds it with no content. Measured on git 2.56.0: `git status --porcelain` prints ` A notes.txt`, and `git status` lists it as `new file` under "Changes not staged for commit"; `git commit` refuses with "no changes added to commit"; `git add -- notes.txt` stages it (`A `); `git restore -- notes.txt` exits 0 and leaves the file empty, still ` A`, so the check keeps failing after the advice destroyed the work.
   - Decided: a kind of its own, `new (intent to add)`, offered `git add` and no discard line. It matches git's ` A` and "new file", so a script's git block and its `RunAll` result tell the same story.
   - Fix lines take only some entries' paths: `git add` lists every entry, `git restore` lists every entry but the intent-to-add ones, and the discard line is left out when no path is left for it. Write the template and an example in the spec (NoUnstagedChanges) first:
@@ -293,7 +293,7 @@ The first public release. More findings for it become tasks here as they are dec
 
 - [ ] **T2.5 Packfiles.** Research first: how Git stores objects in packfiles (`.git/objects/pack`), which every cloned repository uses, and how libgit2 reads them. Background, measured on 2026-11-18: libgit2 keeps a packfile open once it has read from it, and Windows then refuses to delete it; loose objects are never held open, so a fresh TempRepo cannot show a leaked handle, and no test today proves that a read releases its handle (a `Repository` kept in a field passes them all). Then, tests first: a TempRepo helper that packs the repository's objects, and a test that on a packed repository the folder can be deleted right after a `GitAssert` read, with nothing disposed. A `Repository` kept in a field must turn that test red.
 - [x] **T8.1 Linux and macOS CI legs.** Run restore, build, and test on `ubuntu-latest` and `macos-latest` as well as `windows-latest`, as a job matrix with `fail-fast: false` (see the spec's Test tooling > Platforms). Fix or skip, with a stated reason, each test that depends on the behavior of one platform. Proof: a green CI run on all three.
-  - Ticked on 2026-11-21, before the first CI run: untick it if a leg of the build fails. The matrix is in `ci.yml`. The suite passes on Ubuntu (WSL), 136 of 136, once three files with CRLF line endings were converted to LF; `macos-latest` has not run yet.
+  - The matrix is in `ci.yml`. All three legs are green on CI (2026-11-22).
 - [ ] **T8.2 NuGet packaging** with SourceLink and package signing, plus a usage sample.
 - [ ] **T8.3 Branch protection** on main, requiring CI: the three jobs `build-and-test (windows-latest)`, `build-and-test (ubuntu-latest)`, and `build-and-test (macos-latest)` (T8.1). A required check is matched by job name, so renaming a job or a platform leaves the old name required and blocks every pull request.
 

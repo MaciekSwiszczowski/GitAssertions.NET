@@ -41,6 +41,24 @@ public sealed class NoUnstagedChangesTests
         await CheckResultSnapshot.VerifyHealthy(nameof(GitAssert.NoUnstagedChanges), result);
     }
 
+    // Trigger: An agent works in a repository created with git init, before anything was committed.
+    // Behavior: A repository with no commits has no HEAD commit and no index file yet, so nothing differs from the
+    //           index, and the check passes.
+    // Assertion: The shared healthy snapshot: a healthy result with no files and the message
+    //            "NoUnstagedChanges: OK.".
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
+    public async Task NoUnstagedChanges_RepositoryWithNoCommits_IsHealthy()
+    {
+        // Arrange
+        using TempRepo repo = TempRepo.CreateUnborn();
+
+        // Act
+        CheckResult result = GitAssert.Open(repo.Root).NoUnstagedChanges();
+
+        // Assert
+        await CheckResultSnapshot.VerifyHealthy(nameof(GitAssert.NoUnstagedChanges), result);
+    }
+
     // Trigger: An agent edits the tracked readme.txt and never stages the edit.
     // Behavior: The check fails, names the file as modified, and offers to stage the change or discard it.
     // Assertion: The snapshot shows readme.txt in Files and the one-file message, in the singular.

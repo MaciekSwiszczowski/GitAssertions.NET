@@ -32,6 +32,24 @@ public sealed class NoTrackedIgnoredFilesTests
         await CheckResultSnapshot.VerifyHealthy(nameof(GitAssert.NoTrackedIgnoredFiles), result);
     }
 
+    // Trigger: An agent works in a repository created with git init, before anything was committed.
+    // Behavior: A repository with no commits tracks nothing, so no tracked file can match an ignore rule, and the check
+    //           passes.
+    // Assertion: The shared healthy snapshot: a healthy result with no files and the message
+    //            "NoTrackedIgnoredFiles: OK.".
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
+    public async Task NoTrackedIgnoredFiles_RepositoryWithNoCommits_IsHealthy()
+    {
+        // Arrange
+        using TempRepo repo = TempRepo.CreateUnborn();
+
+        // Act
+        CheckResult result = GitAssert.Open(repo.Root).NoTrackedIgnoredFiles();
+
+        // Assert
+        await CheckResultSnapshot.VerifyHealthy(nameof(GitAssert.NoTrackedIgnoredFiles), result);
+    }
+
     // Trigger: A repository ignores *.log and tracks src/app.txt, which that rule does not match.
     // Behavior: A tracked file no rule matches is the normal case, so the check passes.
     // Assertion: The shared healthy snapshot: a healthy result with no files.
