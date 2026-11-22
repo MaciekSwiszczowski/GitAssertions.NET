@@ -161,6 +161,17 @@ internal sealed class TempRepo : IDisposable
     }
 
     /// <summary>
+    /// Aborts the rebase in progress, like <c>git rebase --abort</c>: the branch goes back to where it was before the
+    /// rebase and nothing is left in progress. It throws when no rebase is in progress, so a scenario whose rebase did
+    /// not stop fails here.
+    /// </summary>
+    public TempRepo AbortRebase()
+    {
+        Repo.Rebase.Abort();
+        return this;
+    }
+
+    /// <summary>
     /// Cherry-picks the tip of <paramref name="branch"/> onto the checked-out branch, like <c>git cherry-pick</c>. A
     /// conflict does not throw: the cherry-pick stops as <c>git cherry-pick</c> stops, with the conflicted files left
     /// in the index and on disk and the cherry-pick in progress.

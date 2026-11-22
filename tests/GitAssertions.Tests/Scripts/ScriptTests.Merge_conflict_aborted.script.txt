@@ -1,0 +1,14 @@
+# The conflict of Merge_conflict, aborted with git merge --abort: the merge is gone and the repository is back where it
+# was before it. LibGit2Sharp has no merge abort, so this is real git only.
+git init
+echo base readme.txt
+git add readme.txt
+git commit -m "Add readme"
+git switch -c feature
+echo feature readme.txt
+git commit -am "Change readme on feature"
+git switch main
+echo main readme.txt
+git commit -am "Change readme on main"
+git merge feature
+git merge --abort

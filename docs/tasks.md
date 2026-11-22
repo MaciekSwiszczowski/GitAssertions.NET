@@ -242,7 +242,7 @@ Small tasks, one commit each, so that no message misleads: each one names a stat
     Or abort it:
       git rebase --abort
     ```
-- [ ] **T6.4 Aborted operation passes.** Tests first: a conflicting rebase aborted with LibGit2Sharp's `Rebase.Abort()` passes NoOperationInProgress, and so does a conflicting merge aborted with `git merge --abort` (real Git, because LibGit2Sharp has no merge abort).
+- [x] **T6.4 Aborted operation passes.** Tests first: a conflicting rebase aborted with LibGit2Sharp's `Rebase.Abort()` passes NoOperationInProgress, and so does a conflicting merge aborted with `git merge --abort` (real Git, because LibGit2Sharp has no merge abort).
 - [ ] **T6.5 Unborn HEAD.** A repository with no commits passes every check and RunAll. NoConflicts has this scenario already; add it, on `TempRepo.CreateUnborn`, to NoUntrackedFiles, NoUnstagedChanges, NoOperationInProgress, NoTrackedIgnoredFiles, and RunAll.
 - [ ] **T6.6 Intent-to-add.** A file recorded with `git add -N` is reported as `modified` and offered `git restore`, which empties it, because the index holds it with no content. Measured on git 2.56.0: `git status --porcelain` prints ` A notes.txt`, and `git status` lists it as `new file` under "Changes not staged for commit"; `git commit` refuses with "no changes added to commit"; `git add -- notes.txt` stages it (`A `); `git restore -- notes.txt` exits 0 and leaves the file empty, still ` A`, so the check keeps failing after the advice destroyed the work.
   - Decided: a kind of its own, `new (intent to add)`, offered `git add` and no discard line. It matches git's ` A` and "new file", so a script's git block and its `RunAll` result tell the same story.

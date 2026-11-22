@@ -12,7 +12,9 @@ namespace GitAssertions.Tests;
 /// libgit2 has no sequencer, no interactive rebase, and no bisect, so the scripts
 /// <c>Cherry_pick_sequence_conflict</c>, <c>Revert_sequence_conflict</c>, <c>Rebase_exec_fails</c>, and
 /// <c>Bisect_in_progress</c> (<see cref="Scripts.ScriptTests"/>) build them with real Git; a bisect has its own
-/// message, with <c>git bisect reset</c>. Any other operation uses the generic message and is not tested in v1:
+/// message, with <c>git bisect reset</c>. An operation that was aborted passes: a rebase aborted with LibGit2Sharp is
+/// here, and a merge aborted with <c>git merge --abort</c>, which LibGit2Sharp cannot do, is the script
+/// <c>Merge_conflict_aborted</c>. Any other operation uses the generic message and is not tested in v1:
 /// libgit2 cannot set up a <c>git am</c>, and Git's state files are never written by hand (docs/specification.md,
 /// Test tooling). Every test is a snapshot test with no other assertion: a reviewed <c>.verified.txt</c> file beside
 /// this class holds the whole result, rule, health, files, and message. A failing scenario ends in
@@ -142,6 +144,25 @@ public sealed class NoOperationInProgressTests
 
         // Assert
         await CheckResultSnapshot.Verify(result);
+    }
+
+    // Trigger: A feature branch and main both change the same line of readme.txt, rebasing the feature branch onto main
+    //          stops on the conflict, and the agent aborts the rebase, as git rebase --abort does.
+    // Behavior: The check passes: an aborted rebase leaves nothing in progress.
+    // Assertion: The shared healthy snapshot: a healthy result with no files and the message
+    //            "NoOperationInProgress: OK.".
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
+    public async Task NoOperationInProgress_RebaseAborted_IsHealthy()
+    {
+        // Arrange
+        using TempRepo repo = TempRepo.Create();
+        DivergeOnInitialFile(repo).Checkout(Feature).Rebase(TempRepo.MainBranch).AbortRebase();
+
+        // Act
+        CheckResult result = GitAssert.Open(repo.Root).NoOperationInProgress();
+
+        // Assert
+        await CheckResultSnapshot.VerifyHealthy(nameof(GitAssert.NoOperationInProgress), result);
     }
 
     /// <summary>
