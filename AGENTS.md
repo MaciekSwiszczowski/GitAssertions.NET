@@ -49,6 +49,13 @@ the background. If `codex` is not found, say so and stop; do not look for it els
 codex exec -C C:\_github\GitAssertions -s read-only '$code-review $review-agent Review the current changeset, including staged, unstaged, and untracked files. Do not modify files.'
 ```
 
+**A reviewer does not run this pipeline.** It belongs to the agent that did the work. An agent asked to review a
+changeset, Codex included, reviews it and reports its findings: it does not go through these steps, and never starts
+the Codex command itself.
+
+**Why:** on 2026-11-22 Codex, reviewing a changeset, read this section and started a Codex review of its own from
+inside the review, twice in a row; each inner run failed with "Access is denied".
+
 **A follow-up is not a task.** When the user takes the work back and asks for a change on top of it, such as fixing a
 test or renaming a class, that change is a fix. Make it, build, run the tests, and report. Do not run the
 self-review or the Codex review again: the reviews belong to finishing a task, not to every request.
@@ -155,9 +162,9 @@ the build will not catch a miss, and it stays a review step.
 Never write `"\n"`, `'\n'`, or `"\r\n"` in C# code. Pick by what the text is for:
 
 - Content of a file, or a string, that must hold one particular line break on every system: the constants in
-  `src/GitAssertions/LineBreak.cs`, `LineBreak.Lf`, `LineBreak.Cr`, and `LineBreak.CrLf`. In a test class, alias the
-  ones you need (`private const string CrLf = LineBreak.CrLf;`) and build the content with constant interpolation,
-  which `[InlineData]` accepts: `$"one{Lf}two{CrLf}three{Lf}"`.
+  `src/GitAssertions/LineBreak.cs`, `LineBreak.Lf`, `LineBreak.Cr`, and `LineBreak.CrLf`. The test project imports them
+  with `global using static` (`GlobalUsings.cs`), so a test writes `Lf`, `Cr`, and `CrLf` and builds the content with
+  constant interpolation, which `[InlineData]` accepts: `$"one{Lf}two{CrLf}three{Lf}"`.
 - Text for a person on the current system, such as what a test writes to its output: `Environment.NewLine`.
 
 ```csharp

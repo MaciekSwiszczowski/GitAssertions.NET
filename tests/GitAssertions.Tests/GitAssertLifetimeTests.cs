@@ -131,7 +131,7 @@ public sealed class GitAssertLifetimeTests
     {
         // Arrange
         using TempRepo repo = TempRepo.Create();
-        File.WriteAllText(Path.Combine(repo.Root, ".git", "config"), "[core\n");
+        File.WriteAllText(Path.Combine(repo.Root, ".git", "config"), $"[core{Lf}");
         string libGit2SharpMessage = Should.Throw<LibGit2SharpException>(() => Repository.IsValid(repo.Root)).Message;
 
         // Assert

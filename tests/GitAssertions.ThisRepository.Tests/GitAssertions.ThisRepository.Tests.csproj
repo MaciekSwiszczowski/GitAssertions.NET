@@ -26,13 +26,16 @@
 
   <!--
     The snapshot helper and the timeout are shared with GitAssertions.Tests, not copied. GitAnswer is a type of the
-    helper's script overload, which this project does not call but the helper's source needs to compile.
+    helper's script overload, which this project does not call but the helper's source needs to compile. LineBreak is
+    the library's own internal class, linked as source because this project sees only the public API, like a user's
+    own test project, and the helper writes its snapshots with LineBreak.Lf.
   -->
   <ItemGroup>
     <Compile Include="..\GitAssertions.Tests\Infrastructure\CheckResultSnapshot.cs"
              Link="Shared\CheckResultSnapshot.cs" />
     <Compile Include="..\GitAssertions.Tests\Infrastructure\GitAnswer.cs" Link="Shared\GitAnswer.cs" />
     <Compile Include="..\GitAssertions.Tests\TestTimeouts.cs" Link="Shared\TestTimeouts.cs" />
+    <Compile Include="..\..\src\GitAssertions\LineBreak.cs" Link="Shared\LineBreak.cs" />
   </ItemGroup>
 
   <!-- The root of the repository these tests are built from, for ThisRepositoryTests. -->

@@ -133,7 +133,7 @@ public sealed class NoUntrackedFilesTests
         // Arrange
         using TempRepo repo = TempRepo.Create();
         repo.AddFile("edited.txt").AddFile("deleted.txt").Stage("edited.txt", "deleted.txt").Commit("Add two files");
-        repo.AddFile("edited.txt", "changed\n").Delete("deleted.txt").AddFile("staged.txt").Stage("staged.txt");
+        repo.AddFile("edited.txt", $"changed{Lf}").Delete("deleted.txt").AddFile("staged.txt").Stage("staged.txt");
 
         // Act
         CheckResult result = GitAssert.Open(repo.Root).NoUntrackedFiles();
@@ -151,7 +151,7 @@ public sealed class NoUntrackedFilesTests
     {
         // Arrange
         using TempRepo repo = TempRepo.Create();
-        repo.AddFile("docs/readme.txt", "initial\n").Delete(TempRepo.InitialFile);
+        repo.AddFile("docs/readme.txt", $"initial{Lf}").Delete(TempRepo.InitialFile);
 
         // Act
         CheckResult result = GitAssert.Open(repo.Root).NoUntrackedFiles();

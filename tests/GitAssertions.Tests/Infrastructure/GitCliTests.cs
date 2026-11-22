@@ -275,7 +275,7 @@ public sealed partial class GitCliTests
     [Theory]
     [InlineData("git version 2.32.0", 2, 32, 0)]
     [InlineData("git version 2.56.0.windows.4", 2, 56, 0)]
-    [InlineData("git version 3.0.1\n", 3, 0, 1)]
+    [InlineData($"git version 3.0.1{Lf}", 3, 0, 1)]
     public void RequireSupported_GitFrom2_32_ReturnsItsVersion(string output, int major, int minor, int patch)
     {
         // Act

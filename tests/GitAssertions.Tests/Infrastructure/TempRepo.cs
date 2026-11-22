@@ -45,7 +45,7 @@ internal sealed class TempRepo : IDisposable
         TempRepo repo = CreateUnborn();
         try
         {
-            return repo.AddFile(InitialFile, "initial\n").Stage(InitialFile).Commit("Initial commit");
+            return repo.AddFile(InitialFile, $"initial{Lf}").Stage(InitialFile).Commit("Initial commit");
         }
         catch
         {
@@ -84,7 +84,7 @@ internal sealed class TempRepo : IDisposable
     }
 
     /// <summary>Writes a file to the working tree, creating its folders, and overwrites a file that exists.</summary>
-    public TempRepo AddFile(string path, string content = "content\n")
+    public TempRepo AddFile(string path, string content = $"content{Lf}")
     {
         _directory.CreateTextFile(path, content);
         return this;

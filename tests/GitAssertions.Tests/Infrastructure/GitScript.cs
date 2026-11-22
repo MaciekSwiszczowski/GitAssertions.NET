@@ -35,9 +35,9 @@ internal static class GitScript
 
     private const char Quote = '"';
 
-    private static readonly byte Cr = (byte)LineBreak.Cr[0];
+    private static readonly byte CrByte = (byte)LineBreak.Cr[0];
 
-    private static readonly byte Lf = (byte)LineBreak.Lf[0];
+    private static readonly byte LfByte = (byte)LineBreak.Lf[0];
 
     /// <summary>
     /// The names of the scripts in <paramref name="directory"/> whose file name starts with <paramref name="prefix"/>,
@@ -253,20 +253,20 @@ internal static class GitScript
         for (int index = 0; index < content.Length; index++)
         {
             byte current = content[index];
-            bool isCrlf = current == Cr && index + 1 < content.Length && content[index + 1] == Lf;
+            bool isCrlf = current == CrByte && index + 1 < content.Length && content[index + 1] == LfByte;
             if (isCrlf)
             {
                 index++;
             }
 
-            if (isCrlf || current == Lf)
+            if (isCrlf || current == LfByte)
             {
                 if (toCrlf)
                 {
-                    converted.Add(Cr);
+                    converted.Add(CrByte);
                 }
 
-                converted.Add(Lf);
+                converted.Add(LfByte);
             }
             else
             {

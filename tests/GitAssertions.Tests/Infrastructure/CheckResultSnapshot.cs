@@ -130,15 +130,15 @@ internal static class CheckResultSnapshot
         StringBuilder text = new();
         foreach (GitAnswer answer in gitAnswers)
         {
-            text.Append(CultureInfo.InvariantCulture, $"{answer.Command}:\n");
+            text.Append(CultureInfo.InvariantCulture, $"{answer.Command}:{Lf}");
             using StringReader lines = new(answer.Output);
             while (lines.ReadLine() is { } line)
             {
-                text.Append(CultureInfo.InvariantCulture, $"  {line}\n");
+                text.Append(CultureInfo.InvariantCulture, $"  {line}{Lf}");
             }
         }
 
-        return text.Append(GitBlockEnd).Append('\n').ToString();
+        return text.Append(GitBlockEnd).Append(Lf).ToString();
     }
 
     /// <summary>
@@ -148,15 +148,15 @@ internal static class CheckResultSnapshot
     private static string Render(CheckResult result)
     {
         StringBuilder text = new();
-        text.Append(CultureInfo.InvariantCulture, $"Rule: {result.Rule}\n");
-        text.Append(CultureInfo.InvariantCulture, $"IsHealthy: {result.IsHealthy}\n");
-        text.Append(CultureInfo.InvariantCulture, $"Files ({result.Files.Count}):\n");
+        text.Append(CultureInfo.InvariantCulture, $"Rule: {result.Rule}{Lf}");
+        text.Append(CultureInfo.InvariantCulture, $"IsHealthy: {result.IsHealthy}{Lf}");
+        text.Append(CultureInfo.InvariantCulture, $"Files ({result.Files.Count}):{Lf}");
         foreach (string file in result.Files)
         {
-            text.Append(CultureInfo.InvariantCulture, $"  {file}\n");
+            text.Append(CultureInfo.InvariantCulture, $"  {file}{Lf}");
         }
 
-        text.Append("Message:\n").Append(result.Message);
+        text.Append($"Message:{Lf}").Append(result.Message);
         return text.ToString();
     }
 
@@ -169,26 +169,26 @@ internal static class CheckResultSnapshot
     private static string Render(RunAllResult result)
     {
         StringBuilder text = new();
-        text.Append(CultureInfo.InvariantCulture, $"IsHealthy: {result.IsHealthy}\n");
-        text.Append(CultureInfo.InvariantCulture, $"Results ({result.Results.Count}):\n");
+        text.Append(CultureInfo.InvariantCulture, $"IsHealthy: {result.IsHealthy}{Lf}");
+        text.Append(CultureInfo.InvariantCulture, $"Results ({result.Results.Count}):{Lf}");
         foreach (CheckResult check in result.Results)
         {
             text.Append(
                 CultureInfo.InvariantCulture,
-                $"  {check.Rule}: IsHealthy {check.IsHealthy}, Files ({check.Files.Count}):\n");
+                $"  {check.Rule}: IsHealthy {check.IsHealthy}, Files ({check.Files.Count}):{Lf}");
             foreach (string file in check.Files)
             {
-                text.Append(CultureInfo.InvariantCulture, $"    {file}\n");
+                text.Append(CultureInfo.InvariantCulture, $"    {file}{Lf}");
             }
         }
 
-        text.Append(CultureInfo.InvariantCulture, $"Failures ({result.Failures.Count}):\n");
+        text.Append(CultureInfo.InvariantCulture, $"Failures ({result.Failures.Count}):{Lf}");
         foreach (CheckResult failure in result.Failures)
         {
-            text.Append(CultureInfo.InvariantCulture, $"  {failure.Rule}\n");
+            text.Append(CultureInfo.InvariantCulture, $"  {failure.Rule}{Lf}");
         }
 
-        text.Append("Message:\n").Append(result.Message);
+        text.Append($"Message:{Lf}").Append(result.Message);
         return text.ToString();
     }
 }

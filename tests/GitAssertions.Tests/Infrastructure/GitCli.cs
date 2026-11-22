@@ -128,7 +128,7 @@ internal static partial class GitCli
         if (run.ExitCode != 0)
         {
             throw new InvalidOperationException(
-                $"{command} exited with code {run.ExitCode}.\n{run.StandardError.Trim()}");
+                $"{command} exited with code {run.ExitCode}.{Environment.NewLine}{run.StandardError.Trim()}");
         }
 
         return run.StandardOutput;

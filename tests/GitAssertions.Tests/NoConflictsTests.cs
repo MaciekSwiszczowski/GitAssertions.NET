@@ -61,11 +61,11 @@ public sealed class NoConflictsTests
     {
         // Arrange
         using TempRepo repo = TempRepo.Create();
-        repo.AddFile(Program, "Console.WriteLine(\"base\");\n").Stage(Program).Commit("Add Program.cs");
+        repo.AddFile(Program, $"Console.WriteLine(\"base\");{Lf}").Stage(Program).Commit("Add Program.cs");
         MergeDivergedBranches(
             repo,
-            onFeature: static branch => branch.AddFile(Program, "Console.WriteLine(\"feature\");\n").Stage(Program),
-            onMain: static branch => branch.AddFile(Program, "Console.WriteLine(\"main\");\n").Stage(Program));
+            onFeature: static branch => branch.AddFile(Program, $"Console.WriteLine(\"feature\");{Lf}").Stage(Program),
+            onMain: static branch => branch.AddFile(Program, $"Console.WriteLine(\"main\");{Lf}").Stage(Program));
 
         // Act
         CheckResult result = GitAssert.Open(repo.Root).NoConflicts();
@@ -83,16 +83,16 @@ public sealed class NoConflictsTests
     {
         // Arrange
         using TempRepo repo = TempRepo.Create();
-        repo.AddFile(Program, "Console.WriteLine(\"base\");\n").Stage(Program).Commit("Add Program.cs");
+        repo.AddFile(Program, $"Console.WriteLine(\"base\");{Lf}").Stage(Program).Commit("Add Program.cs");
         MergeDivergedBranches(
             repo,
             onFeature: static branch => branch
-                .AddFile(TempRepo.InitialFile, "feature\n")
-                .AddFile(Program, "Console.WriteLine(\"feature\");\n")
+                .AddFile(TempRepo.InitialFile, $"feature{Lf}")
+                .AddFile(Program, $"Console.WriteLine(\"feature\");{Lf}")
                 .Stage(TempRepo.InitialFile, Program),
             onMain: static branch => branch
-                .AddFile(TempRepo.InitialFile, "main\n")
-                .AddFile(Program, "Console.WriteLine(\"main\");\n")
+                .AddFile(TempRepo.InitialFile, $"main{Lf}")
+                .AddFile(Program, $"Console.WriteLine(\"main\");{Lf}")
                 .Stage(TempRepo.InitialFile, Program));
 
         // Act
@@ -116,9 +116,9 @@ public sealed class NoConflictsTests
         using TempRepo repo = TempRepo.Create();
         MergeDivergedBranches(
             repo,
-            onFeature: static branch => branch.AddFile(TempRepo.InitialFile, "feature\n").Stage(TempRepo.InitialFile),
-            onMain: static branch => branch.AddFile(TempRepo.InitialFile, "main\n").Stage(TempRepo.InitialFile));
-        repo.AddFile(TempRepo.InitialFile, "resolved\n").Stage(TempRepo.InitialFile);
+            onFeature: static branch => branch.AddFile(TempRepo.InitialFile, $"feature{Lf}").Stage(TempRepo.InitialFile),
+            onMain: static branch => branch.AddFile(TempRepo.InitialFile, $"main{Lf}").Stage(TempRepo.InitialFile));
+        repo.AddFile(TempRepo.InitialFile, $"resolved{Lf}").Stage(TempRepo.InitialFile);
 
         // Act
         CheckResult result = GitAssert.Open(repo.Root).NoConflicts();
@@ -141,8 +141,8 @@ public sealed class NoConflictsTests
         using TempRepo repo = TempRepo.Create();
         MergeDivergedBranches(
             repo,
-            onFeature: static branch => branch.AddFile(TempRepo.InitialFile, "feature\n").Stage(TempRepo.InitialFile),
-            onMain: static branch => branch.AddFile(TempRepo.InitialFile, "main\n").Stage(TempRepo.InitialFile));
+            onFeature: static branch => branch.AddFile(TempRepo.InitialFile, $"feature{Lf}").Stage(TempRepo.InitialFile),
+            onMain: static branch => branch.AddFile(TempRepo.InitialFile, $"main{Lf}").Stage(TempRepo.InitialFile));
         repo.Stage(TempRepo.InitialFile);
 
         // Act
@@ -167,7 +167,7 @@ public sealed class NoConflictsTests
         using TempRepo repo = TempRepo.Create();
         MergeDivergedBranches(
             repo,
-            onFeature: static branch => branch.AddFile(TempRepo.InitialFile, "feature\n").Stage(TempRepo.InitialFile),
+            onFeature: static branch => branch.AddFile(TempRepo.InitialFile, $"feature{Lf}").Stage(TempRepo.InitialFile),
             onMain: static branch => branch.Delete(TempRepo.InitialFile).Stage(TempRepo.InitialFile));
 
         // Act
@@ -192,8 +192,8 @@ public sealed class NoConflictsTests
         using TempRepo repo = TempRepo.Create();
         MergeDivergedBranches(
             repo,
-            onFeature: static branch => branch.AddFile("new.txt", "feature\n").Stage("new.txt"),
-            onMain: static branch => branch.AddFile("new.txt", "main\n").Stage("new.txt"));
+            onFeature: static branch => branch.AddFile("new.txt", $"feature{Lf}").Stage("new.txt"),
+            onMain: static branch => branch.AddFile("new.txt", $"main{Lf}").Stage("new.txt"));
 
         // Act
         CheckResult result = GitAssert.Open(repo.Root).NoConflicts();

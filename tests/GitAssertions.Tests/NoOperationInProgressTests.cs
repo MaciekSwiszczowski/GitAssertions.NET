@@ -102,8 +102,8 @@ public sealed class NoOperationInProgressTests
     {
         // Arrange
         using TempRepo repo = TempRepo.Create();
-        repo.AddFile(TempRepo.InitialFile, "first\n").Stage(TempRepo.InitialFile).Commit("Edit first")
-            .AddFile(TempRepo.InitialFile, "second\n").Stage(TempRepo.InitialFile).Commit("Edit second")
+        repo.AddFile(TempRepo.InitialFile, $"first{Lf}").Stage(TempRepo.InitialFile).Commit("Edit first")
+            .AddFile(TempRepo.InitialFile, $"second{Lf}").Stage(TempRepo.InitialFile).Commit("Edit second")
             .Revert("HEAD~1");
 
         // Act
@@ -121,7 +121,7 @@ public sealed class NoOperationInProgressTests
     {
         return repo.Diverge(
             Feature,
-            onFeature: static branch => branch.AddFile(TempRepo.InitialFile, "feature\n").Stage(TempRepo.InitialFile),
-            onMain: static branch => branch.AddFile(TempRepo.InitialFile, "main\n").Stage(TempRepo.InitialFile));
+            onFeature: static branch => branch.AddFile(TempRepo.InitialFile, $"feature{Lf}").Stage(TempRepo.InitialFile),
+            onMain: static branch => branch.AddFile(TempRepo.InitialFile, $"main{Lf}").Stage(TempRepo.InitialFile));
     }
 }

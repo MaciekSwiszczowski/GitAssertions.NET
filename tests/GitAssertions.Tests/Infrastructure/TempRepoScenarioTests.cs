@@ -38,7 +38,7 @@ public sealed class TempRepoScenarioTests
         using TempRepo repo = TempRepo.Create();
 
         // Act
-        repo.AddFile(TempRepo.InitialFile, "changed\n");
+        repo.AddFile(TempRepo.InitialFile, $"changed{Lf}");
 
         // Assert
         repo.Repo.RetrieveStatus(TempRepo.InitialFile).ShouldBe(FileStatus.ModifiedInWorkdir);
@@ -254,11 +254,11 @@ public sealed class TempRepoScenarioTests
         using TempRepo repo = TempRepo.Create();
         repo.CreateBranch("feature")
             .Checkout("feature")
-            .AddFile(TempRepo.InitialFile, "feature\n")
+            .AddFile(TempRepo.InitialFile, $"feature{Lf}")
             .Stage(TempRepo.InitialFile)
             .Commit("Edit on feature")
             .Checkout(TempRepo.MainBranch)
-            .AddFile(TempRepo.InitialFile, "main\n")
+            .AddFile(TempRepo.InitialFile, $"main{Lf}")
             .Stage(TempRepo.InitialFile)
             .Commit("Edit on main");
         string mainTip = repo.Repo.Head.Tip.Sha;
@@ -287,14 +287,14 @@ public sealed class TempRepoScenarioTests
         // Act
         repo.Diverge(
             "feature",
-            onFeature: static branch => branch.AddFile(TempRepo.InitialFile, "feature\n").Stage(TempRepo.InitialFile),
-            onMain: static branch => branch.AddFile(TempRepo.InitialFile, "main\n").Stage(TempRepo.InitialFile));
+            onFeature: static branch => branch.AddFile(TempRepo.InitialFile, $"feature{Lf}").Stage(TempRepo.InitialFile),
+            onMain: static branch => branch.AddFile(TempRepo.InitialFile, $"main{Lf}").Stage(TempRepo.InitialFile));
 
         // Assert
         repo.Repo.Head.FriendlyName.ShouldBe(TempRepo.MainBranch);
-        File.ReadAllText(Path.Combine(repo.Root, TempRepo.InitialFile)).ShouldBe("main\n");
+        File.ReadAllText(Path.Combine(repo.Root, TempRepo.InitialFile)).ShouldBe($"main{Lf}");
         Commit featureTip = repo.Repo.Branches["feature"].Tip;
-        ((Blob)featureTip[TempRepo.InitialFile].Target).GetContentText().ShouldBe("feature\n");
+        ((Blob)featureTip[TempRepo.InitialFile].Target).GetContentText().ShouldBe($"feature{Lf}");
         featureTip.Parents.Select(static parent => parent.Sha).ShouldBe([initialSha]);
         repo.Repo.Head.Tip.Parents.Select(static parent => parent.Sha).ShouldBe([initialSha]);
         repo.Repo.RetrieveStatus().Select(static entry => entry.FilePath).ShouldBeEmpty();
@@ -313,8 +313,8 @@ public sealed class TempRepoScenarioTests
         using TempRepo repo = TempRepo.Create();
         repo.Diverge(
             "feature",
-            onFeature: static branch => branch.AddFile(TempRepo.InitialFile, "feature\n").Stage(TempRepo.InitialFile),
-            onMain: static branch => branch.AddFile(TempRepo.InitialFile, "main\n").Stage(TempRepo.InitialFile));
+            onFeature: static branch => branch.AddFile(TempRepo.InitialFile, $"feature{Lf}").Stage(TempRepo.InitialFile),
+            onMain: static branch => branch.AddFile(TempRepo.InitialFile, $"main{Lf}").Stage(TempRepo.InitialFile));
         repo.Checkout("feature");
         string featureTip = repo.Repo.Head.Tip.Sha;
 
@@ -341,8 +341,8 @@ public sealed class TempRepoScenarioTests
         using TempRepo repo = TempRepo.Create();
         repo.Diverge(
             "feature",
-            onFeature: static branch => branch.AddFile(TempRepo.InitialFile, "feature\n").Stage(TempRepo.InitialFile),
-            onMain: static branch => branch.AddFile(TempRepo.InitialFile, "main\n").Stage(TempRepo.InitialFile));
+            onFeature: static branch => branch.AddFile(TempRepo.InitialFile, $"feature{Lf}").Stage(TempRepo.InitialFile),
+            onMain: static branch => branch.AddFile(TempRepo.InitialFile, $"main{Lf}").Stage(TempRepo.InitialFile));
         string mainTip = repo.Repo.Head.Tip.Sha;
 
         // Act
@@ -366,8 +366,8 @@ public sealed class TempRepoScenarioTests
     {
         // Arrange
         using TempRepo repo = TempRepo.Create();
-        repo.AddFile(TempRepo.InitialFile, "first\n").Stage(TempRepo.InitialFile).Commit("Edit first")
-            .AddFile(TempRepo.InitialFile, "second\n").Stage(TempRepo.InitialFile).Commit("Edit second");
+        repo.AddFile(TempRepo.InitialFile, $"first{Lf}").Stage(TempRepo.InitialFile).Commit("Edit first")
+            .AddFile(TempRepo.InitialFile, $"second{Lf}").Stage(TempRepo.InitialFile).Commit("Edit second");
         string laterTip = repo.Repo.Head.Tip.Sha;
 
         // Act

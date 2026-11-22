@@ -8,14 +8,6 @@ public sealed class GitScriptTests
 {
     private const string ScriptName = "test.script.txt";
 
-    // The line breaks of the scripts and of the files under test come from the repository's constants, never from a
-    // literal, and never from Environment.NewLine where a test needs one particular break on every system.
-    private const string Lf = LineBreak.Lf;
-
-    private const string Cr = LineBreak.Cr;
-
-    private const string CrLf = LineBreak.CrLf;
-
     /// <summary>A write time long before any test runs, so a rewritten file is told from an untouched one.</summary>
     private static readonly DateTime LongAgo = new(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 

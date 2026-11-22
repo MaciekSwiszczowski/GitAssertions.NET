@@ -223,7 +223,7 @@ public sealed class NoTrackedIgnoredFilesTests
         repo.AddFile("notes.tmp").Stage("notes.tmp").Commit("Add notes");
         await File.AppendAllTextAsync(
             Path.Combine(repo.Root, ".git", "info", "exclude"),
-            "*.tmp\n",
+            $"*.tmp{Lf}",
             TestContext.Current.CancellationToken);
 
         // Act
@@ -248,7 +248,7 @@ public sealed class NoTrackedIgnoredFilesTests
         using TempRepo repo = TempRepo.Create();
         repo.AddFile("cache.bak").Stage("cache.bak").Commit("Add cache");
         string excludesFile = Path.Combine(repo.Root, ".git", "global-excludes");
-        await File.WriteAllTextAsync(excludesFile, "*.bak\n", TestContext.Current.CancellationToken);
+        await File.WriteAllTextAsync(excludesFile, $"*.bak{Lf}", TestContext.Current.CancellationToken);
         repo.Repo.Config.Set("core.excludesFile", excludesFile);
 
         // Act

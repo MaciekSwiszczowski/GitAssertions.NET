@@ -45,7 +45,7 @@ public sealed class NoUnstagedChangesTests
     {
         // Arrange
         using TempRepo repo = TempRepo.Create();
-        repo.AddFile(TempRepo.InitialFile, "changed\n");
+        repo.AddFile(TempRepo.InitialFile, $"changed{Lf}");
 
         // Act
         CheckResult result = GitAssert.Open(repo.Root).NoUnstagedChanges();
@@ -81,7 +81,7 @@ public sealed class NoUnstagedChangesTests
         // Arrange
         using TempRepo repo = TempRepo.Create();
         repo.AddFile("old.txt").Stage("old.txt").Commit("Add old.txt");
-        repo.Delete("old.txt").AddFile(TempRepo.InitialFile, "changed\n");
+        repo.Delete("old.txt").AddFile(TempRepo.InitialFile, $"changed{Lf}");
 
         // Act
         CheckResult result = GitAssert.Open(repo.Root).NoUnstagedChanges();
@@ -100,7 +100,7 @@ public sealed class NoUnstagedChangesTests
         // Arrange
         using TempRepo repo = TempRepo.Create();
         repo.AddFile("untracked.txt").AddFile("staged.txt").Stage("staged.txt");
-        repo.AddFile(TempRepo.InitialFile, "changed\n").Stage(TempRepo.InitialFile);
+        repo.AddFile(TempRepo.InitialFile, $"changed{Lf}").Stage(TempRepo.InitialFile);
 
         // Act
         CheckResult result = GitAssert.Open(repo.Root).NoUnstagedChanges();
@@ -118,7 +118,7 @@ public sealed class NoUnstagedChangesTests
     {
         // Arrange
         using TempRepo repo = TempRepo.Create();
-        repo.AddFile("docs/readme.txt", "initial\n").Delete(TempRepo.InitialFile);
+        repo.AddFile("docs/readme.txt", $"initial{Lf}").Delete(TempRepo.InitialFile);
 
         // Act
         CheckResult result = GitAssert.Open(repo.Root).NoUnstagedChanges();
@@ -138,8 +138,8 @@ public sealed class NoUnstagedChangesTests
         // Arrange
         // The two edits differ in length, so the second is a change whatever time the file system stamps on it.
         using TempRepo repo = TempRepo.Create();
-        repo.AddFile(TempRepo.InitialFile, "staged edit\n").Stage(TempRepo.InitialFile);
-        repo.AddFile(TempRepo.InitialFile, "edited again after staging\n");
+        repo.AddFile(TempRepo.InitialFile, $"staged edit{Lf}").Stage(TempRepo.InitialFile);
+        repo.AddFile(TempRepo.InitialFile, $"edited again after staging{Lf}");
 
         // Act
         CheckResult result = GitAssert.Open(repo.Root).NoUnstagedChanges();
@@ -158,8 +158,8 @@ public sealed class NoUnstagedChangesTests
         // Arrange
         // The two versions differ in length, so the second is a change whatever time the file system stamps on it.
         using TempRepo repo = TempRepo.Create();
-        repo.AddFile("new.txt", "staged\n").Stage("new.txt");
-        repo.AddFile("new.txt", "edited after staging\n");
+        repo.AddFile("new.txt", $"staged{Lf}").Stage("new.txt");
+        repo.AddFile("new.txt", $"edited after staging{Lf}");
 
         // Act
         CheckResult result = GitAssert.Open(repo.Root).NoUnstagedChanges();
@@ -200,11 +200,11 @@ public sealed class NoUnstagedChangesTests
         using TempRepo repo = TempRepo.Create();
         repo.CreateBranch("feature")
             .Checkout("feature")
-            .AddFile(TempRepo.InitialFile, "feature\n")
+            .AddFile(TempRepo.InitialFile, $"feature{Lf}")
             .Stage(TempRepo.InitialFile)
             .Commit("Edit on feature")
             .Checkout(TempRepo.MainBranch)
-            .AddFile(TempRepo.InitialFile, "main\n")
+            .AddFile(TempRepo.InitialFile, $"main{Lf}")
             .Stage(TempRepo.InitialFile)
             .Commit("Edit on main")
             .Merge("feature");
@@ -229,11 +229,11 @@ public sealed class NoUnstagedChangesTests
         // the file on disk holds CRLF: https://git-scm.com/docs/git-config#Documentation/git-config.txt-coreautocrlf
         using TempRepo repo = TempRepo.Create();
         repo.Repo.Config.Set("core.autocrlf", true);
-        repo.AddFile("windows.txt", "line\r\n").Stage("windows.txt").Commit("Add windows.txt");
+        repo.AddFile("windows.txt", $"line{CrLf}").Stage("windows.txt").Commit("Add windows.txt");
 
         // The save writes the same bytes at a new time, so Git reads the file again, and that read is where the line
         // endings are normalized. Without core.autocrlf the same bytes would differ from the LF blob.
-        repo.AddFile("windows.txt", "line\r\n");
+        repo.AddFile("windows.txt", $"line{CrLf}");
         File.SetLastWriteTimeUtc(Path.Combine(repo.Root, "windows.txt"), SavedAt);
 
         // Act
@@ -257,8 +257,8 @@ public sealed class NoUnstagedChangesTests
         // prints no change, only the warning "LF will be replaced by CRLF the next time Git touches it".
         using TempRepo repo = TempRepo.Create();
         repo.Repo.Config.Set("core.autocrlf", true);
-        repo.AddFile("windows.txt", "line\r\n").Stage("windows.txt").Commit("Add windows.txt");
-        repo.AddFile("windows.txt", "line\n");
+        repo.AddFile("windows.txt", $"line{CrLf}").Stage("windows.txt").Commit("Add windows.txt");
+        repo.AddFile("windows.txt", $"line{Lf}");
 
         // Act
         CheckResult result = GitAssert.Open(repo.Root).NoUnstagedChanges();
@@ -283,7 +283,7 @@ public sealed class NoUnstagedChangesTests
         // file system that can hold the bit.
         using TempRepo repo = TempRepo.Create();
         repo.Repo.Config.Set("core.filemode", false);
-        repo.AddFile("build.sh", "echo build\n").StageAsExecutable("build.sh").Commit("Add build.sh");
+        repo.AddFile("build.sh", $"echo build{Lf}").StageAsExecutable("build.sh").Commit("Add build.sh");
 
         // Act
         CheckResult result = GitAssert.Open(repo.Root).NoUnstagedChanges();

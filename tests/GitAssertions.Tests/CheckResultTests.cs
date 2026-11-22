@@ -33,7 +33,7 @@ public sealed class CheckResultTests
 
     // Trigger: A check finds one path that breaks its rule.
     // Behavior: The result is unhealthy and keeps the rule's name; the message is the rule line, the path indented two
-    //           spaces, and the fix command with "--" before the path, joined by \n with no newline at the end.
+    //           spaces, and the fix command with "--" before the path, joined by LF with no line break at the end.
     // Assertion: Rule reads "SomeRule", IsHealthy is false, Message reads exactly as below, Files holds a.txt.
     [Fact]
     public void Failing_OnePath_ReportsUnhealthyRuleLineEntryAndFix()
@@ -47,9 +47,9 @@ public sealed class CheckResultTests
         result.Rule.ShouldBe("SomeRule");
         result.IsHealthy.ShouldBeFalse();
         result.Message.ShouldBe(
-            "SomeRule: 1 path found.\n" +
-            "  a.txt\n" +
-            "Fix:\n" +
+            $"SomeRule: 1 path found.{Lf}" +
+            $"  a.txt{Lf}" +
+            $"Fix:{Lf}" +
             "  git add -- a.txt");
         result.Files.ShouldBe(["a.txt"]);
     }
@@ -71,13 +71,13 @@ public sealed class CheckResultTests
 
         // Assert
         result.Message.ShouldBe(
-            "SomeRule: 21 paths found.\n" +
-            "  f01\n  f02\n  f03\n  f04\n  f05\n" +
-            "  f06\n  f07\n  f08\n  f09\n  f10\n" +
-            "  f11\n  f12\n  f13\n  f14\n  f15\n" +
-            "  f16\n  f17\n  f18\n  f19\n  f20\n" +
-            "  ...and 1 more. Run the check again after fixing these.\n" +
-            "Fix:\n" +
+            $"SomeRule: 21 paths found.{Lf}" +
+            $"  f01{Lf}  f02{Lf}  f03{Lf}  f04{Lf}  f05{Lf}" +
+            $"  f06{Lf}  f07{Lf}  f08{Lf}  f09{Lf}  f10{Lf}" +
+            $"  f11{Lf}  f12{Lf}  f13{Lf}  f14{Lf}  f15{Lf}" +
+            $"  f16{Lf}  f17{Lf}  f18{Lf}  f19{Lf}  f20{Lf}" +
+            $"  ...and 1 more. Run the check again after fixing these.{Lf}" +
+            $"Fix:{Lf}" +
             "  git add -- f01 f02 f03 f04 f05 f06 f07 f08 f09 f10 f11 f12 f13 f14 f15 f16 f17 f18 f19 f20");
         result.Files.Count.ShouldBe(21);
         result.Files[^1].ShouldBe("f21");
@@ -98,7 +98,7 @@ public sealed class CheckResultTests
             [FixStep.WithPaths("Fix:", "git add")], paths);
 
         // Assert
-        result.Message.ShouldContain("  f20\nFix:\n");
+        result.Message.ShouldContain($"  f20{Lf}Fix:{Lf}");
         result.Message.ShouldNotContain("...and");
     }
 
@@ -119,12 +119,12 @@ public sealed class CheckResultTests
 
         // Assert
         result.Message.ShouldBe(
-            "SomeRule: 4 paths found.\n" +
-            "  B.txt\n" +
-            "  _x.txt\n" +
-            "  a.txt\n" +
-            "  b.txt\n" +
-            "Fix:\n" +
+            $"SomeRule: 4 paths found.{Lf}" +
+            $"  B.txt{Lf}" +
+            $"  _x.txt{Lf}" +
+            $"  a.txt{Lf}" +
+            $"  b.txt{Lf}" +
+            $"Fix:{Lf}" +
             "  git add -- B.txt _x.txt a.txt b.txt");
         result.Files.ShouldBe(["B.txt", "_x.txt", "a.txt", "b.txt"]);
     }

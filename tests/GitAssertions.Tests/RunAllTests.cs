@@ -44,7 +44,7 @@ public sealed class RunAllTests
     {
         // Arrange
         using TempRepo repo = TempRepo.Create();
-        repo.AddFile("tmp/notes.txt").AddFile(TempRepo.InitialFile, "changed\n");
+        repo.AddFile("tmp/notes.txt").AddFile(TempRepo.InitialFile, $"changed{Lf}");
 
         // Act
         RunAllResult result = GitAssert.Open(repo.Root).RunAll();
