@@ -1,4 +1,7 @@
-﻿IsHealthy: True
+﻿git status --porcelain --untracked-files=all:
+git ls-files -i -c --exclude-standard:
+---
+IsHealthy: True
 Results (5):
   NoUntrackedFiles: IsHealthy True, Files (0):
   NoUnstagedChanges: IsHealthy True, Files (0):

@@ -23,10 +23,20 @@ Never start the self-review before the tests pass on WSL, nor the Codex review w
 its fixes are not in: both would review a diff that is about to change.
 
 ```
-wsl -- bash -lc 'cd /mnt/c/_github/GitAssertions && DiffEngine_Disabled=true dotnet test -c Debug -- --timeout 5m'
+wsl -- bash -lc 'cd /mnt/c/_github/GitAssertions && DiffEngine_Disabled=true dotnet test -c Debug --artifacts-path /tmp/GitAssertions-artifacts -- --timeout 5m'
 ```
 
 **Why (WSL):** on 2026-11-21 the tests failed on Ubuntu, and only the user's own run in WSL showed it.
+
+**Why `--artifacts-path`:** the repository folder is shared between Windows and WSL. Without it, the WSL restore
+overwrites `obj/project.assets.json` with the Linux package folder (`/home/<user>/.nuget/packages/`), and the next
+build on Windows, in Rider too, fails with `NETSDK1064: Package LibGit2Sharp, version 0.32.0 was not found` (2026-11-22).
+With it, WSL keeps its own `obj` and `bin` in `/tmp` on the Linux side and leaves the Windows ones alone. If that error
+shows up anyway, `dotnet restore` on Windows repairs it.
+
+**macOS is not tested locally.** A pass on Ubuntu in WSL stands for a pass on macOS: assume it. The macOS leg runs
+only on GitHub CI, so never report it as left open or as a gap, and do not ask for it. If it fails there, the user
+reports it as a bug.
 
 A question for the user does not hold up the reviews. A question usually means most of the job is done and the answer
 touches a small area, so run the whole pipeline on what you have. Do not settle the question yourself: report it as
@@ -95,12 +105,19 @@ Every test that runs a check ends in a `CheckResultSnapshot` call and asserts no
   the check's tests pin it, and the `RunAll` message repeats every failing one.
 - Script scenarios are the exception to the shared healthy file. In `tests/GitAssertions.Tests/Scripts`, each
   `ScriptTests.<Name>.script.txt` builds a repository with the real git CLI, one line at a time (`git <arguments>`,
-  `echo <content> <path>`, `#` comments; see `GitScript`), and `ScriptTests.<Name>.verified.txt` beside it holds the
-  `RunAll` result, healthy or failing. Both start with the class name, so the IDE nests them under `ScriptTests.cs`
-  like any snapshot test's verified files. A scenario is those two files and no code: `ScriptTests` plays every script
-  in the folder. Here a healthy result is pinned per script, duplicates and all, so a scenario reads as one self-contained
-  pair, and the expectation always comes from that file. Never pick the shared healthy file from the actual result:
-  a script that should fail but comes out healthy would then pass.
+  `echo <content> <path>`, `#` comments; see `GitScript`), and `ScriptTests.<Name>.verified.txt` beside it holds git's
+  own answer about the finished repository (`git status --porcelain --untracked-files=all` and
+  `git ls-files -i -c --exclude-standard`, each command on a line ending in `:`, then each line git printed, indented
+  by two spaces), a line of `---`, then the `RunAll` result, healthy or failing. The `---` keeps a command that printed
+  nothing from reading as the first line of the result (`git ls-files ...: IsHealthy: False`). Both start with the class name, so the IDE nests them
+  under `ScriptTests.cs` like any snapshot test's verified files. A scenario is those two files and no code:
+  `ScriptTests` plays every script in the folder. Write both blocks by hand first. Git's lines and the `RunAll` result
+  must tell the same story, and a person compares them, not the code (a staged change fails no check, so the mapping is
+  not one-to-one): a script whose git block disagrees with its `RunAll` result is a finding to report and decide with
+  the user before the library changes. Never scrub git's block, and never skip a script because two git versions print
+  it differently: that is a finding too. Here a healthy result is pinned per script, duplicates and all, so a scenario
+  reads as one self-contained pair, and the expectation always comes from that file. Never pick the shared healthy file
+  from the actual result: a script that should fail but comes out healthy would then pass.
 - Choose by what the scenario needs. A C# test with `TempRepo` suits a state libgit2 can set up and a test that
   names one check. A script suits a story a person or agent would type with git, and anything libgit2 cannot set up
   the way git does.

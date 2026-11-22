@@ -113,9 +113,45 @@ The git CLI sets up the scenarios libgit2 cannot create, and checks what libgit2
     - `gc.auto=0` and `maintenance.auto=false`, so no background maintenance starts;
     - `core.fsmonitor=false`, because the fsmonitor process outlives git and keeps the temp folder locked;
     - `init.defaultBranch=main` and `commit.gpgsign=false`, so `git init` and `git commit` behave the same on every machine and git version.
+- [x] **T5.5 Git's own answer in script snapshots (do it before T5.2 to T5.4).** Today a script's verified file holds only the RunAll result, so whether git agrees is checked by hand, once, by whoever writes the file, with the git on their machine. Phase 5 exists to check libgit2 against real Git, so after RunAll, `ScriptTests` asks git the same questions about the same folder, and the verified file holds git's answer above the RunAll result.
+  - Two commands, both run through `GitCli.RunAsync` after RunAll, so a failing command fails the test:
+    - `git status --porcelain --untracked-files=all` shows untracked files (`??`), unstaged changes (`M` or `D` in the second column), and conflicts (unmerged lines such as `UU`, `AA`, `DU`, `UD`). `--untracked-files=all` lists untracked files one by one, as NoUntrackedFiles does. Porcelain v1, because git guarantees that its format does not change between git versions or with user config, and it is never translated, unlike plain `git status`.
+    - `git ls-files -i -c --exclude-standard` shows tracked files that match an ignore rule, which `git status` does not show (NoTrackedIgnoredFiles).
+    - NoOperationInProgress has no machine-readable answer from git: the plain `git status` text changes between git versions and is translated, so it stays out.
+  - Asking git changes nothing RunAll read: `GitCli` sets `GIT_OPTIONAL_LOCKS=0`, so `git status` does not rewrite the index.
+  - The format: each command on a line of its own, ending in `:`, then each line git printed, exactly as printed, indented by two spaces; a command that printed nothing is its line alone. A line of `---` ends git's block, because without it a command that printed nothing reads as the first line of the result (`git ls-files -i -c --exclude-standard: IsHealthy: False`). The RunAll result follows, as now. For `ScriptTests.Merge_conflict`:
+
+    ```text
+    git status --porcelain --untracked-files=all:
+      UU readme.txt
+    git ls-files -i -c --exclude-standard:
+    ---
+    IsHealthy: False
+    Results (5):
+    ...
+    ```
+  - Tests first: write git's block into the three existing verified files by hand. `Committed_work` has both commands empty, `Merge_conflict` has `UU readme.txt`, and `Untracked_and_edited` has ` M readme.txt` and `?? tmp/notes.txt`. Then make `CheckResultSnapshot.VerifyScript` render them.
+  - Reading a snapshot: git's lines and the RunAll result must tell the same story. A person compares them, not the code: the mapping is not one-to-one (a staged change, `M ` or `A ` in the first column only, fails no check), and a check test asserts nothing but its snapshot. A script whose git block disagrees with its RunAll result is a finding: report it and decide with Maciek before the library changes.
+  - Git versions differ: on the development machine, Windows has git 2.56 and WSL has 2.34, and each CI runner has its own (CI prints `git --version`). Git's answer for the common cases has not changed in years; the known exceptions are line endings and ignore-rule corner cases, which T5.2 and T5.3 test. If two git versions print different blocks for one script, one verified file cannot match both. That is a finding too, decided with Maciek, for example a minimum git version for that script, or the newest git as the reference. Never scrub git's block, and never skip the script.
+  - Update AGENTS.md's script-scenario rule (the verified file holds git's block and the RunAll result, both written by hand first), and the summaries of `ScriptTests` and `VerifyScript`.
+  - Proof: green on Windows and on Ubuntu (WSL), two git versions apart, and on the three CI legs.
 - [ ] **T5.2 Line endings against real Git.** The NoUnstagedChanges autocrlf scenarios, set up with git, give the same result as `git status`.
-- [ ] **T5.3 Ignore rules against real Git.** A file force-added with `git add -f`, and a file committed before its ignore rule, fail NoTrackedIgnoredFiles.
-- [ ] **T5.4 Operations left in progress by real Git.** A conflicting `git merge` and a conflicting `git rebase` fail NoConflicts and NoOperationInProgress, as the LibGit2Sharp scenarios do.
+- [ ] **T5.3 Ignore rules against real Git.** Script scenarios (`tests/GitAssertions.Tests/Scripts`, one `ScriptTests.<Name>.script.txt` and its `.verified.txt` each), whose RunAll result agrees with git's own answer in the same verified file (T5.5). Write each verified file by hand from the spec first. A result that disagrees with git is a finding: report it and decide with Maciek before the library changes.
+  - A file committed before its ignore rule was added fails NoTrackedIgnoredFiles.
+  - A file force-added with `git add -f` fails NoTrackedIgnoredFiles.
+  - A tracked `bin/` folder, then `bin/` ignored, fails with the folder grouped (`bin/ (<k> files)`), as the spec's template shows.
+  - The fix: `git rm -r --cached` on the ignored file and folder, then a commit, ends healthy.
+  - The ignore rule in `.git/info/exclude` (`echo *.log .git/info/exclude`) instead of `.gitignore` fails the same way.
+  - The ignore rule in the file named by `git config core.excludesFile <file>` fails the same way. Check how a relative path in `core.excludesFile` resolves in git and in libgit2 before choosing the path the script gives.
+- [ ] **T5.4 Operations left in progress by real Git.** Script scenarios, as in T5.3, of operations an agent stops halfway, and of their ends. The conflicting `git merge` is there already (`ScriptTests.Merge_conflict`).
+  - A conflicting `git rebase` fails NoConflicts and NoOperationInProgress, with the rebase Fix lines.
+  - A conflicting `git rebase --apply` fails the same way. Each kind of rebase leaves a different state, and the check maps all three to `rebase` (measured with Git for Windows 2.56.0): a plain `git rebase` leaves `.git/rebase-merge/` with an `interactive` file, which libgit2 reports as `RebaseInteractive`; `--apply` leaves `.git/rebase-apply/`, reported as `Rebase`; LibGit2Sharp's own rebase, in the unit tests, gives `RebaseMerge`. With this scenario, every rebase state the check maps is tested.
+  - The same rebase resolved (`echo`, `git add`, `git rebase --continue`) ends healthy: the "broken, then fixed" story.
+  - A conflicting merge resolved and staged but not committed passes NoConflicts and fails NoOperationInProgress.
+  - A conflicting cherry-pick of one commit, and a conflicting revert of one commit, fail with the cherry-pick and revert Fix lines. Several commits are T6.1.
+  - A delete/modify conflict, `git rm` on one branch and an edit on the other, lists the file in NoConflicts.
+  - A conflicting `git stash pop` leaves the file conflicted with no operation in progress: NoConflicts fails, NoOperationInProgress passes. libgit2 cannot set this up the way git does.
+  - The aborted merge stays in T6.4.
 
 ## Phase 6: Accurate messages
 
@@ -170,3 +206,7 @@ The first public release. More findings for it become tasks here as they are dec
 - [ ] **T9.6 Options:** `RunAll(options)` with per-check on/off, allow-lists, expected branch. Includes the spec's deferred scenarios: allow-listed path passes, disabled checks are skipped.
 - [ ] **T9.7 `git am` in NoOperationInProgress.** libgit2 reports `ApplyMailbox` for a `git am` stopped halfway, and `ApplyMailboxOrRebase` when it cannot tell `git am` from the old rebase backend; T3.5 prints both with the generic message. Name `git am`, with `git am --continue` and `git am --abort`, and decide what `ApplyMailboxOrRebase` prints. Tests with real Git.
 - [ ] **T9.8 Review real repos** for new scenarios and add them as new tasks.
+- [ ] **T9.9 Sparse index against real Git.** A script scenario, as in T5.3: `git sparse-checkout set --sparse-index <folder>` in a repository with files inside and outside that folder, then an edit and an untracked file inside it, and RunAll must report what `git status` does. A sparse index stores each folder outside the checkout as one entry, which libgit2 may not read: if the checks throw or misread it, that is a finding, and the behavior is decided with Maciek first, as for the split index in T9.11.
+- [ ] **T9.10 Index version 4 and the untracked cache against real Git.** A script scenario, as in T5.3: `git config feature.manyFiles true` before the first `git add`, which turns on index version 4 (compressed paths) and the untracked cache, as large repositories and Scalar do. Commit a file, edit it, add an untracked one: RunAll must fail NoUnstagedChanges and NoUntrackedFiles exactly as on a plain index. A misread path or a missed untracked file is a finding, decided with Maciek first.
+- [ ] **T9.11 Split index against real Git.** A script scenario, as in T5.3: `git config core.splitIndex true`, so git splits the index into a small `.git/index` and a shared `.git/sharedindex.<sha>`, and the small one holds a section every reader must understand. Commit a file, edit it, add an untracked one, and RunAll must report what `git status` does. libgit2 may not read a split index at all, and then every check throws: that is a finding, and the behavior (a clear error that says to run `git config core.splitIndex false`, a note in the README, or another) is decided with Maciek first.
+- [ ] **T9.12 `skip-worktree` and `assume-unchanged` against real Git (Maciek decides first).** Script scenarios, as in T5.3: commit `readme.txt`, then `git update-index --skip-worktree readme.txt` (as sparse checkout sets it, or a person hiding a local edit) or `git update-index --assume-unchanged readme.txt`, then edit the file. `git status` shows nothing, and libgit2 may or may not honor the flags. Decide first what the checks report: nothing, as `git status` does (the scripts are healthy), or the hidden edit, because a flag can hide an agent's change from git, which is what this library exists to catch (then perhaps as a check of its own).

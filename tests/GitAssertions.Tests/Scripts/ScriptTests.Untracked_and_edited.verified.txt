@@ -1,4 +1,9 @@
-﻿IsHealthy: False
+﻿git status --porcelain --untracked-files=all:
+   M readme.txt
+  ?? tmp/notes.txt
+git ls-files -i -c --exclude-standard:
+---
+IsHealthy: False
 Results (5):
   NoUntrackedFiles: IsHealthy False, Files (1):
     tmp/notes.txt

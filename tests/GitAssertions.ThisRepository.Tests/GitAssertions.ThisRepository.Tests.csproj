@@ -24,10 +24,14 @@
     <ProjectReference Include="..\..\src\GitAssertions\GitAssertions.csproj" />
   </ItemGroup>
 
-  <!-- The snapshot helper and the timeout are shared with GitAssertions.Tests, not copied. -->
+  <!--
+    The snapshot helper and the timeout are shared with GitAssertions.Tests, not copied. GitAnswer is a type of the
+    helper's script overload, which this project does not call but the helper's source needs to compile.
+  -->
   <ItemGroup>
     <Compile Include="..\GitAssertions.Tests\Infrastructure\CheckResultSnapshot.cs"
              Link="Shared\CheckResultSnapshot.cs" />
+    <Compile Include="..\GitAssertions.Tests\Infrastructure\GitAnswer.cs" Link="Shared\GitAnswer.cs" />
     <Compile Include="..\GitAssertions.Tests\TestTimeouts.cs" Link="Shared\TestTimeouts.cs" />
   </ItemGroup>
 

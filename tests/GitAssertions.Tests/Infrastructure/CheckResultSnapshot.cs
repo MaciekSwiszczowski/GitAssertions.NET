@@ -14,6 +14,12 @@ namespace GitAssertions.Tests.Infrastructure;
 /// </summary>
 internal static class CheckResultSnapshot
 {
+    /// <summary>
+    /// The line that ends git's block in a script's snapshot, above the RunAll result. No command and no RunAll line
+    /// starts with it.
+    /// </summary>
+    private const string GitBlockEnd = "---";
+
     private static readonly char[] NotInFileNames = Path.GetInvalidFileNameChars();
 
     /// <summary>
@@ -57,16 +63,24 @@ internal static class CheckResultSnapshot
     }
 
     /// <summary>
-    /// Verifies <paramref name="result"/>, what <see cref="GitAssert.RunAll"/> returned after a script was played,
-    /// against <c>&lt;fileName&gt;.verified.txt</c>, with <paramref name="fileName"/> the script's file name without
-    /// its <c>.script.txt</c>, so the script and its snapshot sit side by side under the test class. A healthy result
-    /// is pinned per script too, never chosen from the result.
+    /// Verifies what git answered (<paramref name="gitAnswers"/>), then <paramref name="result"/>, what
+    /// <see cref="GitAssert.RunAll"/> returned, after a script was played, against <c>&lt;fileName&gt;.verified.txt</c>,
+    /// with <paramref name="fileName"/> the script's file name without its <c>.script.txt</c>, so the script and its
+    /// snapshot sit side by side under the test class. Each answer is its command on a line ending in <c>:</c>, then
+    /// each line git printed, exactly as printed and indented by two spaces; a command that printed nothing is its line
+    /// alone. A line of <c>---</c> ends the block, so git's last command cannot read as the start of the RunAll result.
+    /// A healthy result is pinned per script too, never chosen from the result, and git's answers are never
+    /// scrubbed: a git version that answers differently must fail the test.
     /// </summary>
-    public static Task VerifyScript(string fileName, RunAllResult result, [CallerFilePath] string sourceFile = "")
+    public static Task VerifyScript(
+        string fileName,
+        IReadOnlyList<GitAnswer> gitAnswers,
+        RunAllResult result,
+        [CallerFilePath] string sourceFile = "")
     {
         VerifySettings settings = new();
         settings.UseFileName(fileName);
-        return Compare(Render(result), settings, sourceFile);
+        return Compare(Render(gitAnswers) + Render(result), settings, sourceFile);
     }
 
     private static VerifySettings SharedHealthySettings(string rule)
@@ -103,6 +117,28 @@ internal static class CheckResultSnapshot
             test.TestMethodArguments.Select(static argument =>
                 $"_{Convert.ToString(argument, CultureInfo.InvariantCulture)}"))}";
         return string.Concat(name.Select(static character => NotInFileNames.Contains(character) ? '-' : character));
+    }
+
+    /// <summary>
+    /// Each answer's command on a line of its own, ending in a colon, then each line git printed, exactly as printed,
+    /// indented by two spaces, and a line of <see cref="GitBlockEnd"/> after the last answer. Without it, a command that
+    /// printed nothing, as the last one often does, reads as the first line of the RunAll result that follows, such as
+    /// <c>git ls-files -i -c --exclude-standard: IsHealthy: False</c>.
+    /// </summary>
+    private static string Render(IReadOnlyList<GitAnswer> gitAnswers)
+    {
+        StringBuilder text = new();
+        foreach (GitAnswer answer in gitAnswers)
+        {
+            text.Append(CultureInfo.InvariantCulture, $"{answer.Command}:\n");
+            using StringReader lines = new(answer.Output);
+            while (lines.ReadLine() is { } line)
+            {
+                text.Append(CultureInfo.InvariantCulture, $"  {line}\n");
+            }
+        }
+
+        return text.Append(GitBlockEnd).Append('\n').ToString();
     }
 
     /// <summary>
