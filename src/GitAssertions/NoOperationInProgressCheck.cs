@@ -4,11 +4,13 @@ namespace GitAssertions;
 
 /// <summary>
 /// The NoOperationInProgress check (docs/specification.md, Checks): fails while a merge, rebase, cherry-pick, or revert
-/// is stopped halfway, which <c>git status</c> reports as "You have unmerged paths" or "rebase in progress". It reads
-/// what libgit2 reports as the current operation, which Git keeps in state files such as <c>MERGE_HEAD</c> and
-/// <c>rebase-merge/</c> until the operation is finished or aborted. The failure lists no file: the operation belongs to
-/// the repository, not to a path. It reads an open repository: <see cref="GitAssert"/> opens one for this check alone,
-/// also when <see cref="GitAssert.RunAll"/> calls it, and closes it when the check returns.
+/// is stopped halfway, which <c>git status</c> reports as "You have unmerged paths" or "rebase in progress", or while a
+/// bisect is left open ("You are currently bisecting"). It reads what libgit2 reports as the current operation, which
+/// Git keeps in state files such as <c>MERGE_HEAD</c> and <c>rebase-merge/</c> until the operation is finished or
+/// aborted, and a bisect's until <c>git bisect reset</c>, even after it has found the first bad commit. The failure
+/// lists no file: the operation belongs to the repository, not to a path. It reads an open repository:
+/// <see cref="GitAssert"/> opens one for this check alone, also when <see cref="GitAssert.RunAll"/> calls it, and
+/// closes it when the check returns.
 /// </summary>
 internal static class NoOperationInProgressCheck
 {
@@ -23,11 +25,22 @@ internal static class NoOperationInProgressCheck
             return CheckResult.Healthy(Rule);
         }
 
+        if (operation == CurrentOperation.Bisect)
+        {
+            // A bisect has no --continue and no --abort, and it is not stopped on a conflict: git bisect reset ends it.
+            return CheckResult.Failing(
+                Rule,
+                "a bisect is in progress.",
+                entries: [],
+                [FixStep.WithCommand("Fix: to end it and return to where you started, run:", "git bisect reset")],
+                files: []);
+        }
+
         string? command = CommandOf(operation);
         if (command is null)
         {
-            // An operation with no command of its own yet (a bisect, git am): libgit2's name for it, and a pointer to
-            // git status, which says how to finish or abort that one.
+            // An operation with no command of its own yet (git am): libgit2's name for it, and a pointer to git
+            // status, which says how to finish or abort that one.
             return CheckResult.Failing(
                 Rule,
                 $"a Git operation ({operation}) is in progress.",

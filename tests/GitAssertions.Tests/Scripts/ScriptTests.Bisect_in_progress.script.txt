@@ -1,0 +1,14 @@
+# A bisect with its first good and bad commits given: Git has checked out a commit between them, and the bisect stays open until git bisect reset. The tree is clean and git status --porcelain says nothing about a bisect, so git's block is empty; only git status in words says "You are currently bisecting".
+git init
+echo one readme.txt
+git add readme.txt
+git commit -m "Add readme"
+echo two readme.txt
+git commit -am "Change readme to two"
+echo three readme.txt
+git commit -am "Change readme to three"
+echo four readme.txt
+git commit -am "Change readme to four"
+git bisect start
+git bisect bad
+git bisect good HEAD~3

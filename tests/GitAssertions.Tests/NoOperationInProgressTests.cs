@@ -7,12 +7,13 @@ namespace GitAssertions.Tests;
 /// NoOperationInProgress): a merge, rebase, cherry-pick, or revert that stopped on a conflict and was neither finished
 /// nor aborted fails the check, and the message names the operation and its own <c>--continue</c> and <c>--abort</c>
 /// commands. Every conflict here is set up with LibGit2Sharp, which leaves the operation in progress as Git does. A
-/// cherry-pick or revert of several commits is not set up here: libgit2 has no sequencer, so the scripts
-/// <c>Cherry_pick_sequence_conflict</c> and <c>Revert_sequence_conflict</c> (<see cref="Scripts.ScriptTests"/>) build it with
-/// real Git. Any other operation uses the generic message and is not tested in v1: libgit2 cannot set up a bisect or
-/// a <c>git am</c>, and Git's state files are never written by hand (docs/specification.md, Test tooling). Every test
-/// is a snapshot test with no other assertion: a reviewed <c>.verified.txt</c> file beside this class holds the whole
-/// result, rule, health, files, and message. A failing scenario ends in
+/// cherry-pick or revert of several commits and a bisect are not set up here: libgit2 has no sequencer and no bisect,
+/// so the scripts <c>Cherry_pick_sequence_conflict</c>, <c>Revert_sequence_conflict</c>, and <c>Bisect_in_progress</c>
+/// (<see cref="Scripts.ScriptTests"/>) build them with real Git; a bisect has its own message, with
+/// <c>git bisect reset</c>. Any other operation uses the generic message and is not tested in v1: libgit2 cannot set
+/// up a <c>git am</c>, and Git's state files are never written by hand (docs/specification.md, Test tooling). Every
+/// test is a snapshot test with no other assertion: a reviewed <c>.verified.txt</c> file beside this class holds the
+/// whole result, rule, health, files, and message. A failing scenario ends in
 /// <see cref="CheckResultSnapshot.Verify(CheckResult, string)"/> and has a file of its own; the healthy one ends in
 /// <see cref="CheckResultSnapshot.VerifyHealthy(string, CheckResult, string)"/> and shares
 /// NoOperationInProgress.IsHealthy.verified.txt.

@@ -11,7 +11,7 @@ The library is **read-only**. It inspects the repository and reports what it fin
 Version 1 is a two-day build done with agents. Everything else comes later, in the phases after it in [tasks.md](tasks.md): integration tests with real Git, accurate messages, security, release preparation, and nice-to-have features.
 
 - **Version 1:** NoUntrackedFiles, NoUnstagedChanges, NoConflicts, NoOperationInProgress, NoTrackedIgnoredFiles, and a plain RunAll with no options (no check can be turned off). Unit tests use LibGit2Sharp only, so every v1 scenario is set up in-process.
-- **Later:** a name of its own in NoOperationInProgress for each rarer operation (a cherry-pick or revert of several commits, bisect, `git am`), a `typechange` entry kind for NoUnstagedChanges (a tracked file replaced by another type, such as a symlink), an intent-to-add kind for NoUnstagedChanges (a file recorded with `git add -N`, which gets `git add` and no discard line), NoMixedStaging (a narrower check than NoUnstagedChanges, which also reports a file changed again after it was staged; its own method, left out of the default `RunAll` so no file prints twice), NotDetachedHead, OnExpectedBranch, NoStaleIndexLock, configuration (enabling and disabling checks, allow-lists, expected branch), the CliWrap real-Git integration tests, and NuGet packaging. Use a project reference until then.
+- **Later:** a name of its own in NoOperationInProgress for the rarest operation left (`git am`), a `typechange` entry kind for NoUnstagedChanges (a tracked file replaced by another type, such as a symlink), an intent-to-add kind for NoUnstagedChanges (a file recorded with `git add -N`, which gets `git add` and no discard line), NoMixedStaging (a narrower check than NoUnstagedChanges, which also reports a file changed again after it was staged; its own method, left out of the default `RunAll` so no file prints twice), NotDetachedHead, OnExpectedBranch, NoStaleIndexLock, configuration (enabling and disabling checks, allow-lists, expected branch), the CliWrap real-Git integration tests, and NuGet packaging. Use a project reference until then.
 
 Test scenarios that depend on a later feature (allow-listed paths, disabled checks, verification against the real git CLI) are marked *(later)* below and are not part of v1.
 
@@ -73,9 +73,9 @@ Each check's "Fix" below is the suggestion printed in its failure message, not s
 4. **NoConflicts**: no conflicted entries. Detect with `repo.Index.Conflicts`: the paths that still hold conflict stages in the index, as `git ls-files -u` lists them. The check reads the index only, so a file staged with conflict markers left in it passes.
    - Fix: resolve the conflicts in the file, then `git add <file>`, which also stages a deletion when the resolution was to delete it; then finish the operation (see NoOperationInProgress).
    - Tests: clean repo passes; repository with no commits passes; merge of two branches editing the same line fails and lists the file; conflict resolved and staged passes; delete/modify conflict fails; add/add conflict (both branches created the same file) fails; binary-file conflict fails.
-5. **NoOperationInProgress**: no unfinished merge, rebase, cherry-pick or revert. Detect with `repo.Info.CurrentOperation`.
-   - Fix: `git <operation> --continue` once conflicts are resolved, or `git <operation> --abort`, where `<operation>` is merge, rebase, cherry-pick, or revert.
-   - Tests: clean repo passes; conflicting merge left open fails and names "merge"; conflicting rebase left open fails and names "rebase"; conflicting cherry-pick left open fails and names "cherry-pick"; conflicting revert left open fails and names "revert"; a cherry-pick or revert of several commits, bisect, `git merge --no-commit`, and an interactive rebase stopped at `edit` each fail and name the operation *(later)*; an aborted operation passes *(later)*; a repository with no commits passes *(later)*.
+5. **NoOperationInProgress**: no unfinished merge, rebase, cherry-pick, revert, or bisect. Detect with `repo.Info.CurrentOperation`.
+   - Fix: `git <operation> --continue` once conflicts are resolved, or `git <operation> --abort`, where `<operation>` is merge, rebase, cherry-pick, or revert; `git bisect reset` for a bisect.
+   - Tests: clean repo passes; conflicting merge left open fails and names "merge"; conflicting rebase left open fails and names "rebase"; conflicting cherry-pick left open fails and names "cherry-pick"; conflicting revert left open fails and names "revert"; a cherry-pick or revert of several commits fails and names "cherry-pick" or "revert"; a bisect fails and names "bisect"; `git merge --no-commit` and an interactive rebase stopped at `edit` each fail and name the operation *(later)*; an aborted operation passes *(later)*; a repository with no commits passes *(later)*.
 6. **NotDetachedHead**: HEAD points to a branch. Detect with `repo.Info.IsHeadDetached`.
    - Fix: `git switch <branch>` (create one with `git switch -c` if the commits must be kept).
    - Tests: on a branch passes; checkout of a commit SHA fails and the message shows the SHA; fresh repo with no commits (unborn HEAD) passes.
@@ -210,7 +210,7 @@ Fix: resolve the conflicts in each file, then run:
 
 ### NoOperationInProgress
 
-No entries; `Files` is empty even on failure. `<operation>` is `merge`, `rebase`, `cherry-pick`, or `revert` (all libgit2 rebase variants map to `rebase`, and a cherry-pick or revert of several commits, `CherryPickSequence` and `RevertSequence`, maps to `cherry-pick` and `revert` like one of a single commit).
+No entries; `Files` is empty even on failure. `<operation>` is `merge`, `rebase`, `cherry-pick`, or `revert` (all libgit2 rebase variants map to `rebase`, and a cherry-pick or revert of several commits, `CherryPickSequence` and `RevertSequence`, maps to `cherry-pick` and `revert` like one of a single commit). A bisect (`Bisect`) has no `--continue` and no `--abort`: it ends with `git bisect reset`, so it has a template of its own, below.
 
 ```text
 NoOperationInProgress: a <operation> is in progress.
@@ -230,7 +230,15 @@ Or abort it:
   git merge --abort
 ```
 
-Any other operation libgit2 reports uses `a Git operation (<name>) is in progress.` with the fix line `Fix: run "git status" to see how to finish or abort it.` and no command. `<name>` is libgit2's name for it, the `CurrentOperation` value. In v1 that covers bisect (`Bisect`) and `git am` (`ApplyMailbox`, `ApplyMailboxOrRebase`); later tasks give each its own name and Fix lines. It is not tested in v1.
+A bisect, `git bisect start` and every step after it until `git bisect reset`, is named as a bisect. It checks out a commit of its own and keeps its state in the repository until `git bisect reset` ends it and returns to the branch or commit where it started, so that command is the only fix; the message names no file. It is not an operation that stopped on a conflict, so the Fix line does not mention conflicts.
+
+```text
+NoOperationInProgress: a bisect is in progress.
+Fix: to end it and return to where you started, run:
+  git bisect reset
+```
+
+Any other operation libgit2 reports uses `a Git operation (<name>) is in progress.` with the fix line `Fix: run "git status" to see how to finish or abort it.` and no command. `<name>` is libgit2's name for it, the `CurrentOperation` value. In v1 that covers `git am` (`ApplyMailbox`, `ApplyMailboxOrRebase`); a later task gives it its own name and Fix lines. It is not tested in v1.
 
 ```text
 NoOperationInProgress: a Git operation (<name>) is in progress.
@@ -240,7 +248,7 @@ Fix: run "git status" to see how to finish or abort it.
 Example:
 
 ```text
-NoOperationInProgress: a Git operation (Bisect) is in progress.
+NoOperationInProgress: a Git operation (ApplyMailbox) is in progress.
 Fix: run "git status" to see how to finish or abort it.
 ```
 
