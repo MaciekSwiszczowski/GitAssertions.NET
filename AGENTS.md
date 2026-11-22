@@ -23,10 +23,17 @@ Never start the self-review before the tests pass on WSL, nor the Codex review w
 its fixes are not in: both would review a diff that is about to change.
 
 ```
-wsl -- bash -lc 'cd /mnt/c/_github/GitAssertions && DiffEngine_Disabled=true dotnet test -c Debug --artifacts-path /tmp/GitAssertions-artifacts -- --timeout 5m'
+wsl -- bash -lc 'cd /mnt/c/_github/GitAssertions && mkdir -p TestResults/wsl && set -o pipefail && DiffEngine_Disabled=true dotnet test -c Debug --artifacts-path /tmp/GitAssertions-artifacts -- --timeout 5m 2>&1 | tee TestResults/wsl/wsl-$(date +%Y%m%d-%H%M%S).log'
 ```
 
 **Why (WSL):** on 2026-11-21 the tests failed on Ubuntu, and only the user's own run in WSL showed it.
+
+**Why the log:** the command writes the whole console to `TestResults/wsl/wsl-<date>-<time>.log` as well as printing it.
+On 2026-11-22 a WSL run failed two tests, the next run passed, and the console output was gone, so nobody could say
+which tests failed or why. Each run has a log of its own, so a green rerun does not overwrite a red one. When a WSL run
+fails, read its log before you rerun anything, and name the failed tests in the report even if a rerun passes. The
+folder is gitignored (`TestResults/`), so delete old logs whenever you like. `set -o pipefail` keeps the exit code of
+`dotnet test` instead of `tee`'s.
 
 **Why `--artifacts-path`:** the repository folder is shared between Windows and WSL. Without it, the WSL restore
 overwrites `obj/project.assets.json` with the Linux package folder (`/home/<user>/.nuget/packages/`), and the next

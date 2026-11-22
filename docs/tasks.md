@@ -142,7 +142,7 @@ The git CLI sets up the scenarios libgit2 cannot create, and checks what libgit2
   - A malformed line (an unclosed quote, a missing path, an unknown instruction) throws `InvalidOperationException` naming the script and the line, as now.
   - Tests first, value tests in `GitScriptTests`: quoted content with spaces is written as one line; `append` adds a line to an existing file and creates a missing one; `unix2dos` and `dos2unix` convert every line break; each malformed line throws naming its line. The existing scripts and their verified files do not change.
   - Update the summary of `GitScript` and the instruction list in AGENTS.md's script-scenario rule.
-- [ ] **T5.2 Line endings against real Git (after T5.6).** Script scenarios, as in T5.3, that mirror the two NoUnstagedChanges autocrlf unit tests with real git. Git's own answer in the verified file (T5.5) shows whether `git status` agrees; a disagreement is a finding: report it and decide with Maciek before the library changes.
+- [x] **T5.2 Line endings against real Git (after T5.6).** Script scenarios, as in T5.3, that mirror the two NoUnstagedChanges autocrlf unit tests with real git. Git's own answer in the verified file (T5.5) shows whether `git status` agrees; a disagreement is a finding: report it and decide with Maciek before the library changes.
   - A file committed with `core.autocrlf=true` from CRLF content, then rewritten with LF, fails NoUnstagedChanges as modified, as `NoUnstagedChanges_LineEndingsChangedWithAutoCrlf_FailsAsModified` does. Measured with Git for Windows 2.56.0: `git status` lists the file as modified, because its size no longer matches the size git cached, although `git diff` prints no change.
 
     ```text
@@ -155,6 +155,23 @@ The git CLI sets up the scenarios libgit2 cannot create, and checks what libgit2
     dos2unix windows.txt
     ```
   - The same file saved unchanged, ending in `unix2dos windows.txt` instead of `dos2unix`, is healthy, as `NoUnstagedChanges_CrlfFileSavedUnchangedWithAutoCrlf_IsHealthy` is: git reads the file again and compares it with its CRLF turned back into LF.
+- [ ] **T5.7 Line endings set by `.gitattributes` and `core.autocrlf=input` against real Git (after T5.2).** Many .NET repositories set line endings with `* text=auto` in `.gitattributes`, as the Visual Studio template does, instead of `core.autocrlf`; Linux and macOS users usually set `core.autocrlf=input`. Script scenarios, as in T5.2, with the T5.6 instructions. Each commits its `.gitattributes` too, so only NoUnstagedChanges can fail. Git's answers below were measured with Git for Windows 2.56.0 and with git 2.34.1 on Ubuntu (WSL), which agree; a RunAll result that disagrees with git's block is a finding: report it and decide with Maciek before the library changes.
+  - `* text=auto`, a file committed from CRLF content (`echo`, `unix2dos`, `git add`, `git commit`), then rewritten with LF (`dos2unix`): `git status` lists it as modified, so NoUnstagedChanges fails. Saved unchanged instead (`unix2dos` again): healthy.
+  - `*.txt eol=crlf`, the same file rewritten with LF: modified.
+  - `git config core.autocrlf input`, the same file rewritten with LF: modified. Saved unchanged: healthy.
+  - A file committed with CRLF before any rule, so the committed version holds CRLF; then `echo "* text=auto" .gitattributes`, committed; then the file saved unchanged: healthy. Git does not normalize a file whose committed version already holds CRLF until `git add --renormalize` is run, and libgit2 may not follow that rule, which makes this the likeliest disagreement.
+
+    ```text
+    git init
+    echo line windows.txt
+    unix2dos windows.txt
+    git add windows.txt
+    git commit -m "Add windows.txt with CRLF"
+    echo "* text=auto" .gitattributes
+    git add .gitattributes
+    git commit -m "Normalize line endings"
+    unix2dos windows.txt
+    ```
 - [ ] **T5.3 Ignore rules against real Git.** Script scenarios (`tests/GitAssertions.Tests/Scripts`, one `ScriptTests.<Name>.script.txt` and its `.verified.txt` each), whose RunAll result agrees with git's own answer in the same verified file (T5.5). Write each verified file by hand from the spec first. A result that disagrees with git is a finding: report it and decide with Maciek before the library changes.
   - A file committed before its ignore rule was added fails NoTrackedIgnoredFiles.
   - A file force-added with `git add -f` fails NoTrackedIgnoredFiles.
@@ -162,6 +179,10 @@ The git CLI sets up the scenarios libgit2 cannot create, and checks what libgit2
   - The fix: `git rm -r --cached` on the ignored file and folder, then a commit, ends healthy.
   - The ignore rule in `.git/info/exclude` (`echo *.log .git/info/exclude`) instead of `.gitignore` fails the same way.
   - The ignore rule in the file named by `git config core.excludesFile <file>` fails the same way. Check how a relative path in `core.excludesFile` resolves in git and in libgit2 before choosing the path the script gives.
+  - Negated rules, where libgit2 is likeliest to differ from git. Each script commits the files, then writes and commits `.gitignore` (`echo`, then `append` for the second rule), so only NoTrackedIgnoredFiles can fail. Git's answers below were measured with Git for Windows 2.56.0 and with git 2.34.1 on Ubuntu (WSL), which agree:
+    - `debug.log` and `keep.log` tracked, then `*.log` and `!keep.log`: `git ls-files -i -c --exclude-standard` lists `debug.log` only, so the check lists `debug.log` alone (mirrors `NoTrackedIgnoredFiles_FileBroughtBackByNegatedRule_IsHealthy`, with a second file that stays ignored).
+    - `bin/keep.txt` and `bin/app.dll` tracked, then `bin/*` and `!bin/keep.txt`: git lists `bin/app.dll` only. The check lists it alone, not grouped, because `bin/` holds a tracked file it does not report (mirrors `NoTrackedIgnoredFiles_FolderContentsIgnoredButOneFileKept_ListsOnlyTheIgnoredFile`).
+    - The same files, then `bin/` and `!bin/keep.txt`: git lists both, because a file cannot be brought back when its folder is ignored (gitignore documentation). The check lists the folder grouped, `bin/ (2 files)`. This is the classic trap, and the likeliest place for libgit2 to bring the file back where git does not.
 - [ ] **T5.4 Operations left in progress by real Git.** Script scenarios, as in T5.3, of operations an agent stops halfway, and of their ends. The conflicting `git merge` is there already (`ScriptTests.Merge_conflict`).
   - A conflicting `git rebase` fails NoConflicts and NoOperationInProgress, with the rebase Fix lines.
   - A conflicting `git rebase --apply` fails the same way. Each kind of rebase leaves a different state, and the check maps all three to `rebase` (measured with Git for Windows 2.56.0): a plain `git rebase` leaves `.git/rebase-merge/` with an `interactive` file, which libgit2 reports as `RebaseInteractive`; `--apply` leaves `.git/rebase-apply/`, reported as `Rebase`; LibGit2Sharp's own rebase, in the unit tests, gives `RebaseMerge`. With this scenario, every rebase state the check maps is tested.

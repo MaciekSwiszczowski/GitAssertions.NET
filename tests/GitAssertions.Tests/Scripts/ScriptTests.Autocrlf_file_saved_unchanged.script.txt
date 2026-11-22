@@ -1,0 +1,10 @@
+# With core.autocrlf=true a CRLF file is committed, then saved again with the same bytes. Where git sees the new write
+# time it reads the file again, turns its CRLF back into LF, and finds the committed content; where it sees no change
+# it does not read it. Either way nothing is modified.
+git init
+git config core.autocrlf true
+echo line windows.txt
+unix2dos windows.txt
+git add windows.txt
+git commit -m "Add windows.txt"
+unix2dos windows.txt

@@ -1,0 +1,9 @@
+# With core.autocrlf=true a file is committed from CRLF content, then rewritten with LF and no other change.
+# Git lists it as modified, because its size no longer matches the size it cached, although git diff prints no change.
+git init
+git config core.autocrlf true
+echo line windows.txt
+unix2dos windows.txt
+git add windows.txt
+git commit -m "Add windows.txt"
+dos2unix windows.txt
