@@ -1,0 +1,10 @@
+# With core.autocrlf=input, as Linux and macOS users usually set it, a file is committed from CRLF content, then
+# rewritten with LF and no other change. Git lists it as modified, because its size no longer matches the size it
+# cached.
+git init
+git config core.autocrlf input
+echo line windows.txt
+unix2dos windows.txt
+git add windows.txt
+git commit -m "Add windows.txt"
+dos2unix windows.txt

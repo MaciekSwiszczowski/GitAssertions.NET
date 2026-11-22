@@ -1,0 +1,12 @@
+# A file is committed with CRLF before any rule, so the committed version holds CRLF. Then "* text=auto" is added to
+# .gitattributes and committed, and the file is saved with the same bytes. Git does not normalize a file whose committed
+# version already holds CRLF until git add --renormalize is run, so it finds the file unchanged.
+git init
+echo line windows.txt
+unix2dos windows.txt
+git add windows.txt
+git commit -m "Add windows.txt with CRLF"
+echo "* text=auto" .gitattributes
+git add .gitattributes
+git commit -m "Normalize line endings"
+unix2dos windows.txt

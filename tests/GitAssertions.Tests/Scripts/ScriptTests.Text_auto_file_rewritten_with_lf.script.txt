@@ -1,0 +1,10 @@
+# .gitattributes sets "* text=auto", as the Visual Studio template does, and core.autocrlf is not set. A file is
+# committed from CRLF content, then rewritten with LF and no other change. Git lists it as modified, because its size
+# no longer matches the size it cached, although git diff prints no change.
+git init
+echo "* text=auto" .gitattributes
+echo line windows.txt
+unix2dos windows.txt
+git add .gitattributes windows.txt
+git commit -m "Add .gitattributes and windows.txt"
+dos2unix windows.txt

@@ -1,0 +1,9 @@
+# With "* text=auto" in .gitattributes a CRLF file is committed, then saved again with the same bytes. Git sees the new
+# write time, reads the file again, turns its CRLF back into LF, and finds the committed content. Nothing is modified.
+git init
+echo "* text=auto" .gitattributes
+echo line windows.txt
+unix2dos windows.txt
+git add .gitattributes windows.txt
+git commit -m "Add .gitattributes and windows.txt"
+unix2dos windows.txt

@@ -1,0 +1,9 @@
+# .gitattributes sets "*.txt eol=crlf". A file is committed from CRLF content, then rewritten with LF and no other
+# change. Git lists it as modified, because its size no longer matches the size it cached.
+git init
+echo "*.txt eol=crlf" .gitattributes
+echo line windows.txt
+unix2dos windows.txt
+git add .gitattributes windows.txt
+git commit -m "Add .gitattributes and windows.txt"
+dos2unix windows.txt
