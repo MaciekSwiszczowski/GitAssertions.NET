@@ -1,0 +1,35 @@
+# Dependabot version updates (docs/specification.md, Security > Supply chain). Dependabot alerts and security
+# updates are switched on in the repository's settings, not in this file.
+# https://docs.github.com/en/code-security/dependabot/working-with-dependabot/dependabot-options-reference
+version: 2
+
+updates:
+  # NuGet: the versions are central, so a PR edits Directory.Packages.props. Dependabot is also how a libgit2 fix
+  # arrives: it ships inside LibGit2Sharp, and its release is an ordinary version update.
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      # The analyzer packages are referenced only under Debug_Analyzers (Directory.Build.props), and a new release
+      # often adds warnings that fail that build. One PR moves them together, so the new warnings are fixed once.
+      # A new analyzer package is added here and in Directory.Packages.props.
+      analyzers:
+        patterns:
+          - "Meziantou.Analyzer"
+          - "Microsoft.VisualStudio.Threading.Analyzers"
+          - "ErrorProne.NET.CoreAnalyzers"
+          - "Roslynator.Analyzers"
+          - "IDisposableAnalyzers"
+          - "AsyncFixer"
+    ignore:
+      # Pinned to [32.0.0], the last free version (Directory.Packages.props). Every later version falls under Verify's
+      # maintenance fee, so a PR for the next one would come every week. Moving past it is the owner's decision.
+      - dependency-name: "Verify.XunitV3"
+
+  # GitHub Actions: with every action pinned to a commit SHA and its release in a comment (T7.1), a PR moves the SHA and
+  # the comment together.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

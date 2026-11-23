@@ -22,7 +22,8 @@
       Pinned to the last free version, an exception to "take the latest". The next version is not free: Verify's Open
       Source Maintenance Fee covers every version released after 2026-09-01, 32.0.1 onwards, and from 33.0 the build
       fails (SponsorCheck SC021) until the project declares its fee status. The square brackets make the version
-      exact, so no automatic update moves it. https://github.com/VerifyTests/Verify/blob/main/docs/maintenance-fee.md
+      exact, so no automatic update moves it, and .github/dependabot.yml ignores the package, so no PR proposes the
+      next one. https://github.com/VerifyTests/Verify/blob/main/docs/maintenance-fee.md
     -->
     <PackageVersion Include="Verify.XunitV3" Version="[32.0.0]" />
     <!-- A disposable temp folder whose delete handles read-only files and links; used by the TempRepo test fixture. -->
