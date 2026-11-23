@@ -30,6 +30,8 @@
     <PackageVersion Include="Meziantou.Framework.TemporaryDirectory" Version="3.0.17" />
     <!-- Runs the git CLI in the integration tests (T5.1): tree kill on cancel, and both output pipes read together. -->
     <PackageVersion Include="CliWrap" Version="3.10.5" />
+    <!-- Reads the workflows in WorkflowPinTests (T7.11), so only real `uses:` keys are checked, whatever the quoting. -->
+    <PackageVersion Include="YamlDotNet" Version="18.1.0" />
   </ItemGroup>
   <!--
     Referenced only under the Debug_Analyzers configuration - see Directory.Build.props. Debug stays fast and

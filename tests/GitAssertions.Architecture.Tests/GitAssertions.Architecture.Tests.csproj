@@ -1,11 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    Runs the library's checks on this repository itself, in a test project of its own, because libgit2's settings are
-    process-wide. GitAssertions.Tests cuts libgit2 off from the machine's git config (LibGit2Isolation), so its
-    TempRepo scenarios repeat on every machine. A test of a real repository needs the opposite: the config that
-    `git status` reads, such as core.autocrlf, or a CRLF file saved unchanged reads as modified. This project does
-    not isolate, so it sees what `git status` and a user's own test project see.
+    Rules about this repository, not tests of the library: today the library's checks run on this repository itself
+    (ThisRepositoryTests). Only a person changes or weakens a rule here (AGENTS.md, The repository's own tests are a
+    ratchet).
+
+    It is a test project of its own because libgit2's settings are process-wide. GitAssertions.Tests cuts libgit2 off
+    from the machine's git config (LibGit2Isolation), so its TempRepo scenarios repeat on every machine. A check of a
+    real repository needs the opposite: the config that `git status` reads, such as core.autocrlf, or a CRLF file
+    saved unchanged reads as modified. This project does not isolate, so it sees what `git status` and a user's own
+    test project see. A future rule that needs isolation goes into GitAssertions.Tests.
   -->
   <PropertyGroup>
     <IsPackable>false</IsPackable>
@@ -15,9 +19,11 @@
 
   <ItemGroup>
     <PackageReference Include="Verify.XunitV3" />
+    <PackageReference Include="Shouldly" />
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="YamlDotNet" />
   </ItemGroup>
 
   <ItemGroup>
@@ -38,7 +44,7 @@
     <Compile Include="..\..\src\GitAssertions\LineBreak.cs" Link="Shared\LineBreak.cs" />
   </ItemGroup>
 
-  <!-- The root of the repository these tests are built from, for ThisRepositoryTests. -->
+  <!-- The root of the repository these tests are built from, for every rule in this project. -->
   <PropertyGroup>
     <ThisRepositoryRoot>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)../..'))</ThisRepositoryRoot>
   </PropertyGroup>

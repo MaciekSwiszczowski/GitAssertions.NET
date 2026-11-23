@@ -117,6 +117,23 @@ the staged changeset and commits it if they are happy with it.
 healthy end of an agent's work: nothing is lost, and nothing is committed without a person. On 2026-11-19 the user
 replaced the earlier rule, which staged only new files and left edits and deletes unstaged.
 
+## The repository's own tests are a ratchet
+
+`GitAssertions.Architecture.Tests` holds rules about this repository, not tests of the library: today the library's
+checks, run on this repository itself (`ThisRepositoryTests`). An agent may add a rule there. Only a person may change,
+weaken, or delete one: an allow-list entry, a looser pattern, a skip, and a removed assertion are all changes. A
+change needs a task in `docs/tasks.md` that names it, or the user's own request.
+
+- If your work fails one of these tests, fix the work, not the test.
+- If you believe a rule is wrong, say so and stop.
+- A rule that replaces another is added next to it. Removing the old one is a person's change.
+- Its verified files change with the snapshot format it shares with `GitAssertions.Tests` (`CheckResultSnapshot`).
+  That is not a change of a rule, but read each diff before you accept it.
+
+**Why:** these tests guard the repository against the mistakes an agent makes in it, such as leaving changes unstaged
+or adding a GitHub Action by its tag instead of a commit SHA. An agent whose work fails one could make it pass by
+editing the test, and the guard would be gone without anyone deciding it (2026-11-23, with the action-pin test).
+
 ## Check tests are snapshot tests
 
 Every test that runs a check ends in a `CheckResultSnapshot` call and asserts nothing else: the whole `CheckResult`

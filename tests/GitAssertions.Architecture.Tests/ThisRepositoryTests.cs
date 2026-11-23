@@ -3,7 +3,7 @@ using System.Reflection;
 using GitAssertions.Tests;
 using GitAssertions.Tests.Infrastructure;
 
-namespace GitAssertions.ThisRepository.Tests;
+namespace GitAssertions.Architecture.Tests;
 
 /// <summary>
 /// Runs the library's own checks on this repository, the one these tests are built from, so an agent that leaves it

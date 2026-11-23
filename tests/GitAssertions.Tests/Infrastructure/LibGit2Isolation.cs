@@ -16,7 +16,7 @@ internal static class LibGit2Isolation
     /// this process and sees the same clean slate. It runs as the module loads, not on first use of a fixture, so every
     /// test here gets the same settings whichever runs first. A test of a real repository does not belong in this
     /// project: it needs the machine's config, as <c>git status</c> reads it, so it lives in
-    /// GitAssertions.ThisRepository.Tests.
+    /// GitAssertions.Architecture.Tests.
     /// </summary>
     [ModuleInitializer]
     internal static void Initialize()

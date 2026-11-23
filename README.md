@@ -71,7 +71,7 @@ The check tests are [Verify](https://github.com/VerifyTests/Verify) snapshot tes
 
 Integration tests run the real `git` CLI to set up what libgit2 cannot (`TempRepo.GitAsync`), cut off from your Git config like the rest. They are tagged `Category=Integration`, run with every other test, and need git 2.32 or later on `PATH`: a missing or older git fails them, with a message that says to install or update it, and never skips them.
 
-Two test projects: `GitAssertions.Tests` builds throwaway repositories and cuts libgit2 off from your Git config, so its results repeat on every machine. `GitAssertions.ThisRepository.Tests` runs the checks on this repository itself and reads your Git config as `git status` does. Stage your changes before you run it: it fails on an untracked file or an unstaged change.
+Two test projects: `GitAssertions.Tests` builds throwaway repositories and cuts libgit2 off from your Git config, so its results repeat on every machine. `GitAssertions.Architecture.Tests` holds rules about this repository: it runs the checks on this repository itself and reads your Git config as `git status` does. Stage your changes before you run it: it fails on an untracked file or an unstaged change.
 
 ## Status
 
