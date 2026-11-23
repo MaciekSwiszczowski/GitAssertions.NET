@@ -7,5 +7,4 @@ NoUnstagedChanges: 1 file has unstaged changes.
   modified: new.txt
 Fix:
   git add -- new.txt
-Or discard the changes:
-  git restore -- new.txt
+Or discard the changes, if they are not needed. Discarding cannot be undone, so an agent may need a person to confirm it.

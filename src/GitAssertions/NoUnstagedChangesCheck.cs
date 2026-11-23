@@ -7,9 +7,9 @@ namespace GitAssertions;
 /// <summary>
 /// The NoUnstagedChanges check (docs/specification.md, Checks): fails for every tracked file whose working-tree copy
 /// differs from the index, edited or deleted. A file recorded with <c>git add -N</c> (intent to add) is listed as a
-/// kind of its own, and <c>git restore</c> is not offered for it. It reads an open repository:
-/// <see cref="GitAssert"/> opens one for this check alone, also when <see cref="GitAssert.RunAll"/> calls it, and
-/// closes it when the check returns.
+/// kind of its own, and the sentence about discarding changes is left out when it is the only kind. It reads an open
+/// repository: <see cref="GitAssert"/> opens one for this check alone, also when <see cref="GitAssert.RunAll"/> calls
+/// it, and closes it when the check returns.
 /// </summary>
 internal static class NoUnstagedChangesCheck
 {
@@ -31,11 +31,12 @@ internal static class NoUnstagedChangesCheck
     [
         FixStep.WithPaths("Fix:", "git add"),
 
-        // The index holds an intent-to-add file with no content, so git restore would empty it, and the file would
-        // stay unstaged: the advice would destroy the work and the check would keep failing.
-        FixStep.WithPaths(
-            "Or discard the changes:",
-            "git restore",
+        // Discarding edits cannot be undone, because Git never stored them. So it is said in words, last, and never
+        // given as a command (spec, Common format). It is left out when every entry is an intent-to-add file: the index
+        // holds such a file with no content, so discarding it would empty it, and it would stay unstaged.
+        FixStep.TextOnly(
+            "Or discard the changes, if they are not needed. Discarding cannot be undone, " +
+            "so an agent may need a person to confirm it.",
             static entry => !string.Equals(entry.Kind, IntentToAddKind, StringComparison.Ordinal)),
     ];
 

@@ -19,5 +19,4 @@ NoUnstagedChanges: 1 file has unstaged changes.
   modified: windows.txt
 Fix:
   git add -- windows.txt
-Or discard the changes:
-  git restore -- windows.txt
+Or discard the changes, if they are not needed. Discarding cannot be undone, so an agent may need a person to confirm it.

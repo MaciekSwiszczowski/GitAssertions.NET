@@ -7,6 +7,5 @@ NoUntrackedFiles: 1 untracked file found.
   docs/readme.txt
 Fix:
   git add -- docs/readme.txt
-Or delete them:
-  git clean -f -- docs/readme.txt
 Or ignore them: add the paths to .gitignore.
+Or delete them, if they are not needed. Deleting cannot be undone, so an agent may need a person to confirm it.

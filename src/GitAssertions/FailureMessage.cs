@@ -8,9 +8,9 @@ namespace GitAssertions;
 /// Prints a failing check's message in the spec's common format (docs/specification.md, Failure messages, Common
 /// format), so every check reads the same way: the rule line; the entries, sorted ordinally by their whole line as
 /// printed and at most <see cref="ListedEntryLimit"/> of them; then the fix blocks, whose commands name the listed
-/// entries they are right for (<see cref="FixStep.TakesEntry"/>), every one unless the step says otherwise; then, when
-/// a command left a path out, the note that names it. Lines are joined by <see cref="LineBreak.Lf"/>, with no line
-/// break at the end.
+/// entries they are right for (<see cref="FixStep.AppliesTo"/>), every one unless the step says otherwise, and a
+/// sentence only when it is right for some entry; then, when a command left a path out, the note that names it. Lines
+/// are joined by <see cref="LineBreak.Lf"/>, with no line break at the end.
 /// <para>
 /// File names come from the repository, which may be hostile, so paths are the only untrusted input (spec, Security).
 /// A path goes into a command only when it is shell-safe, see <see cref="IsShellSafe"/>. Wherever a path is printed
@@ -92,10 +92,15 @@ internal static class FailureMessage
         {
             if (!fix.TakesPaths)
             {
-                lines.Add(fix.Label);
-                if (fix.Command is not null)
+                // A sentence for some kinds of entry only is printed when one of them is among the entries, all of
+                // them, not the 20 listed: what the sentence says holds for the check's whole finding.
+                if (fix.AppliesToAny(entries))
                 {
-                    lines.Add(Indent + fix.Command);
+                    lines.Add(fix.Label);
+                    if (fix.Command is not null)
+                    {
+                        lines.Add(Indent + fix.Command);
+                    }
                 }
 
                 continue;
@@ -106,7 +111,7 @@ internal static class FailureMessage
             // does nothing.
             string commandPaths = string.Join(
                 ' ',
-                listed.Where(entry => fix.TakesEntry(entry.Entry))
+                listed.Where(entry => fix.AppliesTo(entry.Entry))
                     .SelectMany(static entry => entry.Entry.Paths)
                     .Where(IsShellSafe)
                     .Select(QuoteForCommand));
@@ -134,7 +139,7 @@ internal static class FailureMessage
         string[] unsafePaths =
         [
             .. listed
-                .Where(entry => fixes.Any(fix => fix.TakesPaths && fix.TakesEntry(entry)))
+                .Where(entry => fixes.Any(fix => fix.TakesPaths && fix.AppliesTo(entry)))
                 .SelectMany(static entry => entry.Paths)
                 .Where(static path => !IsShellSafe(path))
                 .Select(static path => Indent + Display(path)),

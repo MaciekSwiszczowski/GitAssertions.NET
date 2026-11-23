@@ -4,7 +4,7 @@ A small .NET library of xUnit-friendly checks that fail when an AI agent (or any
 
 - Namespace: `GitAssertions`
 - Read-only: it only inspects the repository and never changes it.
-- Every failure message lists the offending paths and ends with a ready-to-paste `Fix:` command.
+- Every failure message lists the offending paths and gives a ready-to-paste `Fix:` command. Deleting untracked files and discarding edits cannot be undone, so the message says so in words and gives no command for them.
 - Git access is powered internally by LibGit2Sharp; the public API exposes only the library's own types.
 
 See [docs/specification.md](docs/specification.md) for the design and [docs/tasks.md](docs/tasks.md) for the task list.
@@ -48,7 +48,7 @@ A failing check does not stop `RunAll`. A check that throws does: `RunAll` throw
 - With `core.autocrlf=true`, a file Git checked out with CRLF line endings and saved again unchanged is not a change. A file rewritten with only its line endings changed, CRLF to LF, is listed as modified, as `git status` lists it, although `git diff` shows nothing; `git add` clears it and stages nothing.
 - With `core.filemode=false`, which Git for Windows sets in every repository it creates or clones, a file committed as executable is not a change on a file system that has no executable bit.
 
-A file recorded with `git add -N` (intent to add), which `git status` prints as ` A`, is listed as `new (intent to add)`. The message offers `git add` for it and no `git restore`, because Git holds the file with no content and `git restore` would empty it. An empty file recorded with `git add -N` is not reported: nothing in the repository marks it as changed, and no content can be lost.
+A file recorded with `git add -N` (intent to add), which `git status` prints as ` A`, is listed as `new (intent to add)`. The message offers `git add` for it and does not suggest discarding it, because Git holds the file with no content and discarding it would empty it. An empty file recorded with `git add -N` is not reported: nothing in the repository marks it as changed, and no content can be lost.
 
 `NoUnstagedChanges` does not support this yet: a tracked file replaced by another type, such as a symlink, which `git status` prints as `typechange`, is not reported.
 

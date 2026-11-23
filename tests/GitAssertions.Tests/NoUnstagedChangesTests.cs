@@ -7,8 +7,8 @@ namespace GitAssertions.Tests;
 /// NoUnstagedChanges): a tracked file that differs from the index, edited or deleted, fails the check, a file staged
 /// and then changed again included; untracked and staged changes do not, and neither do the line-ending and
 /// file-mode differences git status leaves out. A file recorded with <c>git add -N</c> (intent to add) is a kind of
-/// its own and is offered <c>git add</c> and no <c>git restore</c>; LibGit2Sharp cannot record one, so the tests here
-/// stage an empty file and then write it, which leaves the same state, and the scripts
+/// its own and is offered <c>git add</c> and no sentence about discarding the changes; LibGit2Sharp cannot record
+/// one, so the tests here stage an empty file and then write it, which leaves the same state, and the scripts
 /// <c>Intent_to_add_file</c>, <c>Intent_to_add_next_to_edited_file</c> and <c>Intent_to_add_empty_file</c>
 /// (<see cref="Scripts.ScriptTests"/>) use real Git. Every test is a snapshot test with no other assertion: a reviewed
 /// <c>.verified.txt</c> file beside this class holds the whole result, rule, health, files, and message. A failing
@@ -77,8 +77,8 @@ public sealed class NoUnstagedChangesTests
     }
 
     // Trigger: An agent deletes the tracked readme.txt from disk and never stages the removal.
-    // Behavior: The check fails and names the file as deleted; git add stages the removal, git restore brings the
-    //           file back.
+    // Behavior: The check fails and names the file as deleted; git add stages the removal, and the last sentence
+    //           says that discarding cannot be undone.
     // Assertion: The snapshot shows readme.txt in Files and "deleted: readme.txt" in the message.
     [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
     public async Task NoUnstagedChanges_DeletedTrackedFile_FailsAsDeleted()
@@ -114,9 +114,9 @@ public sealed class NoUnstagedChangesTests
 
     // Trigger: An agent deletes the tracked "$(rm -rf ~).txt" and edits the tracked readme.txt, and stages neither.
     // Behavior: The check lists both, with their kinds, but only readme.txt goes into the fix commands, and a note
-    //           names the other to handle by hand: git add and git restore are both left without it.
+    //           names the other to handle by hand: git add is left without it.
     // Assertion: The snapshot has "deleted: $(rm -rf ~).txt" and "modified: readme.txt" in the entries, readme.txt
-    //            alone in both commands, and "$(rm -rf ~).txt" alone in the note, with no kind.
+    //            alone in the command, and "$(rm -rf ~).txt" alone in the note, with no kind.
     [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
     public async Task NoUnstagedChanges_DeletedFileNamedAsShellCommandAndEditedFile_LeavesItOutOfCommands()
     {
@@ -172,7 +172,7 @@ public sealed class NoUnstagedChangesTests
     // Trigger: An agent edits readme.txt and stages the edit, then edits readme.txt again and does not stage that.
     //          git status shows MM.
     // Behavior: The check fails and names the file as modified: a commit would take the staged edit and leave the
-    //           last one out. git restore brings back the staged version, so it drops only the last edit.
+    //           last one out. A discard brings back the staged version, so it drops only the last edit.
     // Assertion: The snapshot shows readme.txt as modified.
     [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
     public async Task NoUnstagedChanges_StagedEditEditedAgain_FailsAsModified()
@@ -231,8 +231,8 @@ public sealed class NoUnstagedChangesTests
     // Trigger: An agent stages an empty notes.txt, then writes its content and does not stage that. The index holds the
     //          empty file and HEAD has no notes.txt: the state git add -N leaves, which libgit2 reads the same way.
     // Behavior: The check fails and names the file as new (intent to add), and offers git add alone: the index holds
-    //           the file with no content, so git restore would empty it.
-    // Assertion: The snapshot shows notes.txt in Files and a message with the Fix block and no discard block.
+    //           the file with no content, so discarding it would empty it.
+    // Assertion: The snapshot shows notes.txt in Files and a message with the Fix block and no discard sentence.
     [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
     public async Task NoUnstagedChanges_EmptyFileStagedThenWritten_FailsAsIntentToAdd()
     {
@@ -253,7 +253,7 @@ public sealed class NoUnstagedChangesTests
     // Trigger: An agent edits the tracked readme.txt, and stages an empty notes.txt and then writes its content, so the
     //          working tree holds one edit and one file in the state git add -N leaves.
     // Behavior: The check fails and prints exactly the spec's intent-to-add example: git add takes both paths, and
-    //           git restore only readme.txt, because restoring notes.txt would empty it.
+    //           the discard sentence is printed, because readme.txt can be discarded.
     // Assertion: The snapshot's message is the spec example character for character, modified before new.
     [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
     public async Task NoUnstagedChanges_EmptyFileStagedThenWrittenAndFileEdited_PrintsSpecExample()
@@ -274,7 +274,7 @@ public sealed class NoUnstagedChangesTests
     //          not stage that, as git add -N notes.txt does before a first commit.
     // Behavior: With no HEAD, no file is in HEAD, so the check fails and names the file as new (intent to add), with
     //           git add alone.
-    // Assertion: The snapshot shows notes.txt in Files and a message with the Fix block and no discard block.
+    // Assertion: The snapshot shows notes.txt in Files and a message with the Fix block and no discard sentence.
     [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
     public async Task NoUnstagedChanges_EmptyFileStagedThenWrittenWithNoCommits_FailsAsIntentToAdd()
     {
@@ -292,9 +292,10 @@ public sealed class NoUnstagedChangesTests
 
     // Trigger: An agent commits an empty empty.txt, then writes content to it and does not stage that. The index holds
     //          the empty file, as it does for an intent-to-add file, but HEAD holds it too.
-    // Behavior: The check fails and names the file as modified, and still offers git restore: it brings back the
-    //           committed empty file, which drops the written content, as a person who asks for a discard means.
-    // Assertion: The snapshot shows empty.txt as modified, with both the Fix and the discard block.
+    // Behavior: The check fails and names the file as modified, and still prints the discard sentence: discarding
+    //           brings back the committed empty file, which drops the written content, as a person who asks for a
+    //           discard means.
+    // Assertion: The snapshot shows empty.txt as modified, with the Fix block and the discard sentence.
     [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
     public async Task NoUnstagedChanges_EmptyCommittedFileWritten_FailsAsModified()
     {

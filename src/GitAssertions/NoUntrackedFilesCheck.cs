@@ -16,8 +16,14 @@ internal static class NoUntrackedFilesCheck
     private static readonly IReadOnlyList<FixStep> Fixes =
     [
         FixStep.WithPaths("Fix:", "git add"),
-        FixStep.WithPaths("Or delete them:", "git clean -f"),
         FixStep.TextOnly("Or ignore them: add the paths to .gitignore."),
+
+        // Deleting an untracked file cannot be undone, because Git never stored its content. So it is said in words,
+        // last, and never given as a command: nothing to paste, and no broader command, such as git clean -fd, to
+        // reach for (spec, Common format).
+        FixStep.TextOnly(
+            "Or delete them, if they are not needed. Deleting cannot be undone, " +
+            "so an agent may need a person to confirm it."),
     ];
 
     public static CheckResult Run(Repository repository)

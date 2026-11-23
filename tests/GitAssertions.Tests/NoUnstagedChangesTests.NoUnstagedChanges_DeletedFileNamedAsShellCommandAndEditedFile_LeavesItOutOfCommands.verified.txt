@@ -9,7 +9,6 @@ NoUnstagedChanges: 2 files have unstaged changes.
   modified: readme.txt
 Fix:
   git add -- readme.txt
-Or discard the changes:
-  git restore -- readme.txt
+Or discard the changes, if they are not needed. Discarding cannot be undone, so an agent may need a person to confirm it.
 Not included in the commands above because the path contains characters that are unsafe in a shell; handle it by hand:
   $(rm -rf ~).txt

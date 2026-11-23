@@ -9,6 +9,5 @@ NoUntrackedFiles: 2 untracked files found.
   tmp/sub/deeper/b.txt
 Fix:
   git add -- tmp/a.txt tmp/sub/deeper/b.txt
-Or delete them:
-  git clean -f -- tmp/a.txt tmp/sub/deeper/b.txt
 Or ignore them: add the paths to .gitignore.
+Or delete them, if they are not needed. Deleting cannot be undone, so an agent may need a person to confirm it.

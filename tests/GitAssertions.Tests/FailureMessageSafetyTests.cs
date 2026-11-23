@@ -125,7 +125,7 @@ public sealed class FailureMessageSafetyTests
             Rule,
             Summary,
             [FailureEntry.Path("$(touch pwned).txt"), FailureEntry.Path("a;b.txt")],
-            [FixStep.WithPaths("Fix:", "git add"), FixStep.WithPaths("Or delete them:", "git clean -f")],
+            [FixStep.WithPaths("Fix:", "git add"), FixStep.WithPaths("Or stop tracking them:", "git rm --cached")],
             ["$(touch pwned).txt", "a;b.txt"]);
 
         // Assert

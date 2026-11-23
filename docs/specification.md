@@ -36,7 +36,7 @@ Test scenarios that depend on a later feature (allow-listed paths, disabled chec
 ## Public API
 
 - `GitAssert.Open(string repoPath)` checks that the path is a repository root and returns a `GitAssert` that keeps the path. It holds no `Repository` handle: each check opens the repository, reads it, and disposes it before returning, also when `RunAll` calls it. So `GitAssert` is not disposable, an instance may be stored and shared between tests running in parallel, and the repository folder can be deleted as soon as a check returns.
-- `Open` throws `ArgumentException` for a path that is not a repository root, and for a bare repository, which has no working tree for the checks to read.
+- `Open` throws `ArgumentException` for a path that is not a repository root, and for a bare repository, which has no working tree for the checks to read. It also throws one, before libgit2 reads anything, for a repository whose own files name a network path (see [Untrusted repositories and libgit2](#untrusted-repositories-and-libgit2)).
 - No LibGit2Sharp type reaches the caller, exceptions included: a LibGit2Sharp exception from `Open` or a check is re-thrown as `InvalidOperationException` with the same message and no inner exception.
 - Each check returns a `CheckResult` with `Rule` (the check's name, e.g. `NoUntrackedFiles`), `IsHealthy`, a short `Message`, and the list of `Files`. `Files` holds every offending path, sorted ordinally and never truncated; a healthy result has an empty `Files` list.
 - Works with any test framework, e.g.
@@ -62,11 +62,11 @@ Every check is tested against a throwaway repository in a temp folder that is de
 Each check's "Fix" below is the suggestion printed in its failure message, not something the library does. The exact v1 message for each check is under [Failure messages](#failure-messages).
 
 1. **NoUntrackedFiles**: no untracked files that aren't ignored. Detect with `FileStatus.NewInWorkdir`.
-   - Fix: `git add` the files if they belong, or delete them, or add them to .gitignore.
+   - Fix: `git add` the files if they belong, or add them to .gitignore. A last sentence says that they can be deleted if they are not needed, that deleting cannot be undone, and that an agent may need a person to confirm it. It gives no command (see [Common format](#common-format)).
    - Tests: clean repo passes; a repository with no commits passes; new file in root fails and lists its path; new file in a nested untracked folder fails and lists the file (not just the folder); file matching .gitignore passes; empty folders pass; edits, deletes, and staged new files pass (NoUnstagedChanges reports the edits and deletes); a file moved without `git mv` lists its new path, as `git status` does; allow-listed path passes *(later)*.
 2. **NoUnstagedChanges**: no modified or deleted files left unstaged. Detect with `ModifiedInWorkdir`, `DeletedFromWorkdir`. The check reports what `git status` reports, so a file moved without `git mv` is its old path, deleted (its new path is untracked, for NoUntrackedFiles), and a change of line endings only is reported when `git status` reports it. A tracked file replaced by another type, such as a symlink, which `git status` prints as `typechange`, is not reported in v1 (later). A file recorded with `git add -N` (intent to add), which `git status` prints as ` A` and lists as `new file`, is a kind of its own, `new (intent to add)`. LibGit2Sharp does not expose the intent-to-add flag, so the file is recognized by its state: not in HEAD, the empty blob in the index, and changed in the working tree. An empty file staged with a plain `git add` and written afterwards (`AM`) has the same state, and gets the same kind. A known gap, accepted: an empty file recorded with `git add -N` matches the empty blob in the index, so nothing marks it as changed, and the check passes it where `git status` prints ` A`; no content can be lost.
-   - Fix: `git add <file>` to stage the change, or `git restore <file>` to discard it. `git restore` is not offered for an intent-to-add file: the index holds it with no content, so `git restore` would empty it and leave it ` A`.
-   - Tests: clean repo passes; a repository with no commits passes; edited tracked file fails; deleted tracked file fails; a file moved without `git mv` lists the old path as deleted; a file staged and then edited again fails as modified (`MM`, `AM`), and one staged and then deleted fails as deleted (`AD`); line-ending-only change with autocrlf set behaves as documented (set up with LibGit2Sharp, and checked against the real git CLI as scripts, with `.gitattributes` and `core.autocrlf=input` too); file mode change on Windows does not fail; an unresolved conflict passes (NoConflicts reports it); a file recorded with `git add -N` fails as `new (intent to add)` and is offered `git add` and no `git restore` (real Git, as a script); the same file next to an edited tracked file is listed with it, and `git restore` names only the edited file (real Git, as a script); an empty file staged and then written fails as `new (intent to add)` too, also in a repository with no commits; a committed empty file that was written fails as `modified` and is still offered `git restore`, because HEAD holds it; an empty file recorded with `git add -N` passes, the known gap above (real Git, as a script, with the disagreement between git's block and the `RunAll` result recorded in its comment).
+   - Fix: `git add <file>` to stage the change. A last sentence says that the changes can be discarded if they are not needed, that discarding cannot be undone, and that an agent may need a person to confirm it. It gives no command (see [Common format](#common-format)). The sentence is left out when every entry is an intent-to-add file: the index holds it with no content, so discarding it would empty it and leave it ` A`.
+   - Tests: clean repo passes; a repository with no commits passes; edited tracked file fails; deleted tracked file fails; a file moved without `git mv` lists the old path as deleted; a file staged and then edited again fails as modified (`MM`, `AM`), and one staged and then deleted fails as deleted (`AD`); line-ending-only change with autocrlf set behaves as documented (set up with LibGit2Sharp, and checked against the real git CLI as scripts, with `.gitattributes` and `core.autocrlf=input` too); file mode change on Windows does not fail; an unresolved conflict passes (NoConflicts reports it); a file recorded with `git add -N` fails as `new (intent to add)` and is offered `git add` and no discard sentence (real Git, as a script); the same file next to an edited tracked file is listed with it, and the discard sentence is printed, because the edited file can be discarded (real Git, as a script); an empty file staged and then written fails as `new (intent to add)` too, also in a repository with no commits; a committed empty file that was written fails as `modified` and still gets the discard sentence, because HEAD holds it; an empty file recorded with `git add -N` passes, the known gap above (real Git, as a script, with the disagreement between git's block and the `RunAll` result recorded in its comment).
 3. **NoMixedStaging** *(later)*: no file both staged and changed again. Narrower than NoUnstagedChanges, which reports these files too, and the only check for someone who keeps other unstaged edits on purpose. Called on its own, not part of the default `RunAll`.
    - Fix: `git add <file>` to stage the latest version, then commit.
    - Tests: staged-only file passes this check; unstaged-only file passes this check; staged then edited again fails; staged then deleted from disk fails.
@@ -127,6 +127,7 @@ Fix:
   <command>
 Or <alternative description>:
   <command>
+Or <destructive alternative>, if it is not needed. <It> cannot be undone, so an agent may need a person to confirm it.
 ```
 
 - **First line:** the rule name, a colon, and a one-sentence summary with the count, e.g. `NoUnstagedChanges: 2 files have unstaged changes.` Use the singular form for one item (`1 file has`).
@@ -134,7 +135,9 @@ Or <alternative description>:
 - **Limit:** at most 20 entries. When there are more, the 21st line is `  ...and <n> more. Run the check again after fixing these.` `CheckResult.Files` still holds every offending path. Path length and total message size are capped too (see [Output limits](#output-limits)).
 - **`Fix:`** one command line, indented two spaces, that fixes exactly the listed entries when run from the repository root. Paths are separated from options with `--`.
 - **`Or ...:`** zero or more alternatives, each with its own command line, or a plain sentence when there is no single command (e.g. editing .gitignore).
-- **Paths per command:** a command takes the paths of the listed entries it is right for, in entry order. Most take every entry; one that is wrong for a kind of entry leaves those out (`git restore` in NoUnstagedChanges leaves out the intent-to-add entries), and a command with no path left is left out with its label line.
+- **A destructive alternative is said in words, never given as a command.** An alternative that cannot be undone, because Git never stored what it destroys (deleting untracked files, discarding unstaged changes), is always a sentence of the form of the last line of the template above, and always the last of the fixes. It names no command, so nothing can be pasted, and an agent told to make the checks pass is not pointed at a command, or at a broader one such as `git clean -fd`. It warns, and it leaves the decision to a person.
+- **Paths per command:** a command takes the paths of the listed entries it is right for, in entry order. A command that is wrong for a kind of entry leaves those out, and a command with no path left is left out with its label line. Today every command takes every entry.
+- **Sentences per entry:** a sentence that holds for only some kinds of entry is printed only when some entry is of such a kind (the discard sentence of NoUnstagedChanges).
 - **Quoting:** a path goes into a command only if it is *shell-safe* (see [Shell-safe paths](#shell-safe-paths)). A shell-safe path is wrapped in double quotes when it contains anything other than ASCII letters and digits, `.`, `_`, `-`, and `/`, e.g. `"docs/my notes.md"` or `"docs/café.md"`. Inside double quotes, the allowed characters are literal in bash, PowerShell, and cmd.
 - **Unsafe paths:** a path that isn't shell-safe is still listed as an entry, in escaped form, but is left out of every command. After the commands, the message adds `Not included in the commands above because the path contains characters that are unsafe in a shell; handle it by hand:` followed by each such path, escaped and indented two spaces. If no listed path is shell-safe, the command lines are omitted and only this note is printed (a sentence-only fix line, which holds no command, stays). The note names only a path that a command with paths would have taken, so a check whose fixes take no paths prints none.
 - **Line endings:** `\n` between lines, no trailing newline.
@@ -147,9 +150,8 @@ NoUntrackedFiles: <n> untracked file(s) found.
   <path>
 Fix:
   git add -- <paths>
-Or delete them:
-  git clean -f -- <paths>
 Or ignore them: add the paths to .gitignore.
+Or delete them, if they are not needed. Deleting cannot be undone, so an agent may need a person to confirm it.
 ```
 
 Example:
@@ -160,25 +162,25 @@ NoUntrackedFiles: 2 untracked files found.
   tmp/notes.txt
 Fix:
   git add -- "docs/my notes.md" tmp/notes.txt
-Or delete them:
-  git clean -f -- "docs/my notes.md" tmp/notes.txt
 Or ignore them: add the paths to .gitignore.
+Or delete them, if they are not needed. Deleting cannot be undone, so an agent may need a person to confirm it.
 ```
+
+The last sentence is printed whatever the paths are, also when none of them is shell-safe: it names no path.
 
 ### NoUnstagedChanges
 
-Entry kinds: `modified`, `deleted`, `new (intent to add)`. There is no `renamed` kind: a file moved without `git mv` is listed as its old path, `deleted`. `new (intent to add)` is a file recorded with `git add -N`, which Git holds with no content: it gets `git add`, and no `git restore`, which would empty the file and leave it unstaged still.
+Entry kinds: `modified`, `deleted`, `new (intent to add)`. There is no `renamed` kind: a file moved without `git mv` is listed as its old path, `deleted`. `new (intent to add)` is a file recorded with `git add -N`, which Git holds with no content: it gets `git add`, and is no reason for the discard sentence, because discarding it would empty the file and leave it unstaged still.
 
 ```text
 NoUnstagedChanges: <n> file(s) have unstaged changes.
   <kind>: <path>
 Fix:
   git add -- <paths>
-Or discard the changes:
-  git restore -- <paths>
+Or discard the changes, if they are not needed. Discarding cannot be undone, so an agent may need a person to confirm it.
 ```
 
-`git add` takes every listed path. `git restore` takes every listed path except the `new (intent to add)` ones, and the `Or discard the changes:` block is left out when no path is left for it.
+`git add` takes every listed path. The `Or discard the changes` sentence is left out when every entry is `new (intent to add)`, and printed when any other kind is among the entries.
 
 Example:
 
@@ -188,8 +190,7 @@ NoUnstagedChanges: 2 files have unstaged changes.
   modified: readme.txt
 Fix:
   git add -- old.txt readme.txt
-Or discard the changes:
-  git restore -- old.txt readme.txt
+Or discard the changes, if they are not needed. Discarding cannot be undone, so an agent may need a person to confirm it.
 ```
 
 Example with a file recorded with `git add -N`:
@@ -200,8 +201,7 @@ NoUnstagedChanges: 2 files have unstaged changes.
   new (intent to add): notes.txt
 Fix:
   git add -- readme.txt notes.txt
-Or discard the changes:
-  git restore -- readme.txt
+Or discard the changes, if they are not needed. Discarding cannot be undone, so an agent may need a person to confirm it.
 ```
 
 Example with only that file:
@@ -322,16 +322,14 @@ NoUntrackedFiles: 1 untracked file found.
   tmp/notes.txt
 Fix:
   git add -- tmp/notes.txt
-Or delete them:
-  git clean -f -- tmp/notes.txt
 Or ignore them: add the paths to .gitignore.
+Or delete them, if they are not needed. Deleting cannot be undone, so an agent may need a person to confirm it.
 
 NoUnstagedChanges: 1 file has unstaged changes.
   modified: readme.txt
 Fix:
   git add -- readme.txt
-Or discard the changes:
-  git restore -- readme.txt
+Or discard the changes, if they are not needed. Discarding cannot be undone, so an agent may need a person to confirm it.
 ```
 
 Later checks will follow the same common format when they are added.
@@ -357,9 +355,8 @@ NoUntrackedFiles: 2 untracked files found.
   tmp/notes.txt
 Fix:
   git add -- tmp/notes.txt
-Or delete them:
-  git clean -f -- tmp/notes.txt
 Or ignore them: add the paths to .gitignore.
+Or delete them, if they are not needed. Deleting cannot be undone, so an agent may need a person to confirm it.
 Not included in the commands above because the path contains characters that are unsafe in a shell; handle it by hand:
   $(rm -rf ~)\n.txt
 ```
@@ -376,7 +373,14 @@ Not included in the commands above because the path contains characters that are
 - The library never executes anything a repository asks for: no hooks, no filter drivers (clean/smudge/process commands from `.gitattributes` and config), no fsmonitor, and no other external commands. LibGit2Sharp does not run hooks or external filter drivers, and the library registers no filters of its own.
 - The library does not change libgit2's global settings. In particular, it leaves repository owner validation (`safe.directory`) switched on.
 - libgit2's settings belong to the whole process, so the two rules above hold only while the calling process leaves them alone: a filter its own code registered through LibGit2Sharp (`GlobalSettings.RegisterFilter`) runs during the checks, as during any libgit2 read, and owner validation it switched off stays off.
-- Who can bring what: a clone brings only the files of its commits, so a hostile file name is all it can carry, and the message rules handle names. Its `.git` folder (config, hooks, alternates) is written on this machine. A repository folder copied in whole, such as an unpacked archive, a shared folder, or a Docker volume, brings its own `.git` as well, and its config can name files elsewhere, even on a network share (`include.path`, `core.excludesFile`, `.git/objects/info/alternates`), which libgit2 reads; on Windows, opening a file on a share can log in to that server automatically and hand it the user's credentials to crack or relay. The checks are meant for repositories cloned or created on this machine, and any other repository folder is untrusted input.
+- Who can bring what: a clone brings only the files of its commits, so a hostile file name is all it can carry, and the message rules handle names. Its `.git` folder (config, hooks, alternates) is written on this machine. A repository folder copied in whole, such as an unpacked archive, a shared folder, or a Docker volume, brings its own `.git` as well, and its config can name files elsewhere, even on a network share (`include.path`, `core.excludesFile`, `.git/objects/info/alternates`), which libgit2 reads; on Windows, opening a file on a share can log in to that server automatically and hand it the user's credentials to crack or relay. So `Open` refuses such a repository as a whole (next point). The checks are meant for repositories cloned or created on this machine, and any other repository folder is untrusted input.
+- Network paths: `Open` throws an `ArgumentException` for `repoPath` when a file the repository brings names a network path. It reads those files itself, before any LibGit2Sharp call, so libgit2 never opens the path. A refusal is meant to be loud: it is how a developer learns that a repository should not have been opened.
+  - The files: `.git/config`, and every file it includes, followed to git's depth of 10 whatever an `includeIf` condition says; `.git/objects/info/alternates`, followed through every local alternate; and, when `.git` is a file, the folder its `gitdir:` line names, that folder's `commondir`, and its `config.worktree`.
+  - The values: `include.path`, `includeIf.<condition>.path`, `core.excludesFile`, and `core.attributesFile`, the keys libgit2 opens as files, read after git's quoting, escapes, and line continuations; every line of an alternates file; and the `gitdir:` and `commondir` paths.
+  - A network path is a value that starts with `\\` or `//`, on every platform, except a local path in its long form: `\\?\` followed by a drive letter.
+  - The message names the file, the key, and the value; says the repository is refused because opening it could send the user's credentials to that server; and says to remove the setting if the repository came from somewhere untrusted. There is no way to switch the refusal off.
+  - Not refused: the global and system config, which are the user's own; a repository opened from a network path, whose server the caller chose; and remote URLs such as `remote.origin.url`, which the checks never contact.
+  - It reads more than libgit2 does on purpose: every path key, every include, and any condition. A value it reads differently from libgit2 can only make it refuse more, never less. What it does not cover is a symlink inside `.git` that points to a share, such as `.git/config` itself.
 - Opening a hostile repository still runs native libgit2 parsing code. libgit2 fixes arrive with LibGit2Sharp releases, through Dependabot (see [Supply chain](#supply-chain)).
 
 ### Information in messages

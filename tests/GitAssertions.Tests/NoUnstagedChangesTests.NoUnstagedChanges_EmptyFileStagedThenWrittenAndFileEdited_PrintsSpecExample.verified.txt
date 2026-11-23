@@ -9,5 +9,4 @@ NoUnstagedChanges: 2 files have unstaged changes.
   new (intent to add): notes.txt
 Fix:
   git add -- readme.txt notes.txt
-Or discard the changes:
-  git restore -- readme.txt
+Or discard the changes, if they are not needed. Discarding cannot be undone, so an agent may need a person to confirm it.

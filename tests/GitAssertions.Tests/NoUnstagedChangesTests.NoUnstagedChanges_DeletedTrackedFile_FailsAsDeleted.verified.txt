@@ -7,5 +7,4 @@ NoUnstagedChanges: 1 file has unstaged changes.
   deleted: readme.txt
 Fix:
   git add -- readme.txt
-Or discard the changes:
-  git restore -- readme.txt
+Or discard the changes, if they are not needed. Discarding cannot be undone, so an agent may need a person to confirm it.

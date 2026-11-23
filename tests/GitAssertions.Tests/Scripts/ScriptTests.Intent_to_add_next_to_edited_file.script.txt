@@ -1,5 +1,5 @@
-# The same file recorded with git add -N, next to a tracked file that was edited: git add takes both paths, and git
-# restore only the edited one, because restoring the intent-to-add file would empty it.
+# The same file recorded with git add -N, next to a tracked file that was edited: git add takes both paths, and the
+# sentence about discarding the changes is printed, because the edited file can be discarded.
 git init
 echo base readme.txt
 git add readme.txt

@@ -9,8 +9,7 @@ NoUntrackedFiles: 2 untracked files found.
   tmp/notes.txt
 Fix:
   git add -- tmp/notes.txt
-Or delete them:
-  git clean -f -- tmp/notes.txt
 Or ignore them: add the paths to .gitignore.
+Or delete them, if they are not needed. Deleting cannot be undone, so an agent may need a person to confirm it.
 Not included in the commands above because the path contains characters that are unsafe in a shell; handle it by hand:
   $(rm -rf ~).txt
