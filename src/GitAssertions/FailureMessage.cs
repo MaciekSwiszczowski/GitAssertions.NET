@@ -223,13 +223,29 @@ internal static class FailureMessage
     /// </summary>
     private static string Display(string path)
     {
+        return Display(path, doubleBackslashes: true);
+    }
+
+    /// <summary>
+    /// Text a repository wrote, as printed in the message of an exception <see cref="GitAssert.Open"/> throws:
+    /// shortened and escaped as <see cref="Display(string)"/> does, except that a backslash stays one. A failure
+    /// message doubles it so every escape in it reads one way; here the text is a path or a value the reader has to
+    /// find in a file, and the doubled <c>\\\\host\\share</c> would not match what is written there.
+    /// </summary>
+    internal static string DisplayInMessage(string text)
+    {
+        return Display(text, doubleBackslashes: false);
+    }
+
+    private static string Display(string path, bool doubleBackslashes)
+    {
         string shown = path.Length > LongestWholePath ? Shorten(path) : path;
         StringBuilder text = new(shown.Length);
         ReadOnlySpan<char> rest = shown;
         while (!rest.IsEmpty)
         {
             _ = Rune.DecodeFromUtf16(rest, out Rune rune, out int consumed);
-            AppendEscaped(text, rune);
+            AppendEscaped(text, rune, doubleBackslashes);
             rest = rest[consumed..];
         }
 
@@ -256,7 +272,7 @@ internal static class FailureMessage
         return string.Concat(head, "...", tail);
     }
 
-    private static void AppendEscaped(StringBuilder text, Rune rune)
+    private static void AppendEscaped(StringBuilder text, Rune rune, bool doubleBackslashes)
     {
         // Written by code point, never as a line-break literal: these are the characters being escaped.
         const int lineFeed = 0x0A;
@@ -266,7 +282,12 @@ internal static class FailureMessage
         switch (rune.Value)
         {
             case Backslash:
-                text.Append(Backslash).Append(Backslash);
+                text.Append(Backslash);
+                if (doubleBackslashes)
+                {
+                    text.Append(Backslash);
+                }
+
                 break;
             case lineFeed:
                 text.Append(Backslash).Append('n');
