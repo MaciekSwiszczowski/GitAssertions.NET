@@ -112,6 +112,26 @@ public sealed class NoUnstagedChangesTests
         await CheckResultSnapshot.Verify(result);
     }
 
+    // Trigger: An agent deletes the tracked "$(rm -rf ~).txt" and edits the tracked readme.txt, and stages neither.
+    // Behavior: The check lists both, with their kinds, but only readme.txt goes into the fix commands, and a note
+    //           names the other to handle by hand: git add and git restore are both left without it.
+    // Assertion: The snapshot has "deleted: $(rm -rf ~).txt" and "modified: readme.txt" in the entries, readme.txt
+    //            alone in both commands, and "$(rm -rf ~).txt" alone in the note, with no kind.
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
+    public async Task NoUnstagedChanges_DeletedFileNamedAsShellCommandAndEditedFile_LeavesItOutOfCommands()
+    {
+        // Arrange
+        using TempRepo repo = TempRepo.Create();
+        repo.AddFile("$(rm -rf ~).txt").Stage("$(rm -rf ~).txt").Commit("Add the file");
+        repo.Delete("$(rm -rf ~).txt").AddFile(TempRepo.InitialFile, $"changed{Lf}");
+
+        // Act
+        CheckResult result = GitAssert.Open(repo.Root).NoUnstagedChanges();
+
+        // Assert
+        await CheckResultSnapshot.Verify(result);
+    }
+
     // Trigger: An agent creates a file it never adds, stages a new file, and stages an edit to readme.txt.
     // Behavior: Untracked files are the untracked-files check's business, and staged changes are where finished work
     //           belongs: the working tree matches the index, so this check passes.

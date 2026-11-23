@@ -77,7 +77,7 @@ Two test projects: `GitAssertions.Tests` builds throwaway repositories and cuts 
 
 Early development. Not yet published to NuGet.
 
-Fix commands do not yet leave out file names with shell characters such as `$(...)` (task T2.3): such a name is only quoted, which does not stop a shell from running it. Read a `Fix:` command before you run it. Until then, a control character in a file name, such as a newline or ESC, is also printed as it is, so it can break a message across lines or affect your terminal.
+File names come from the repository, which may be hostile, so a `Fix:` command takes only shell-safe names: letters, digits, spaces, and `. _ - / + , = @`. A name with anything else, such as `$(...)`, a quote, `;`, or `*`, is listed but left out of every command, and a note after the commands names it to handle by hand. A control or format character in a name, such as a newline or ESC, is printed as an escape (`\n`, `\u{001B}`), so an entry stays on one line. A path longer than 200 characters is shortened in the message and left out of commands, and a message is cut at 16,000 characters. `CheckResult.Files` always holds the raw, whole paths. Fix commands are still suggestions: read one before you run it.
 
 ## License
 

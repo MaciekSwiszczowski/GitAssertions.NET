@@ -136,7 +136,7 @@ Or <alternative description>:
 - **`Or ...:`** zero or more alternatives, each with its own command line, or a plain sentence when there is no single command (e.g. editing .gitignore).
 - **Paths per command:** a command takes the paths of the listed entries it is right for, in entry order. Most take every entry; one that is wrong for a kind of entry leaves those out (`git restore` in NoUnstagedChanges leaves out the intent-to-add entries), and a command with no path left is left out with its label line.
 - **Quoting:** a path goes into a command only if it is *shell-safe* (see [Shell-safe paths](#shell-safe-paths)). A shell-safe path is wrapped in double quotes when it contains anything other than ASCII letters and digits, `.`, `_`, `-`, and `/`, e.g. `"docs/my notes.md"` or `"docs/café.md"`. Inside double quotes, the allowed characters are literal in bash, PowerShell, and cmd.
-- **Unsafe paths:** a path that isn't shell-safe is still listed as an entry, in escaped form, but is left out of every command. After the commands, the message adds `Not included in the commands above because the path contains characters that are unsafe in a shell; handle it by hand:` followed by each such path, escaped and indented two spaces. If no listed path is shell-safe, the command lines are omitted and only this note is printed.
+- **Unsafe paths:** a path that isn't shell-safe is still listed as an entry, in escaped form, but is left out of every command. After the commands, the message adds `Not included in the commands above because the path contains characters that are unsafe in a shell; handle it by hand:` followed by each such path, escaped and indented two spaces. If no listed path is shell-safe, the command lines are omitted and only this note is printed (a sentence-only fix line, which holds no command, stays). The note names only a path that a command with paths would have taken, so a check whose fixes take no paths prints none.
 - **Line endings:** `\n` between lines, no trailing newline.
 - **Healthy result:** `Message` is `<Rule>: OK.` and `Files` is empty.
 
@@ -367,7 +367,7 @@ Not included in the commands above because the path contains characters that are
 ### Output limits
 
 - At most 20 entries per check (see [Common format](#common-format)).
-- A path longer than 200 characters is shortened in entries to its first 100 and last 60 characters joined by `...`, and it is treated as unsafe, so it never appears in a command.
+- A path longer than 200 characters is shortened, in entries and in the unsafe-path note, to its first 100 and last 60 characters joined by `...`, and it is treated as unsafe, so it never appears in a command. The shortening comes first and the escaping after it, so a cut never splits an escape; a cut that would split a surrogate pair (a character such as an emoji, two UTF-16 units) drops the left-over half.
 - A single check's `Message` is at most 16,000 characters. If a message would exceed that (which the other limits should prevent), it is cut at the last full line that fits and ends with `  ...message truncated.` A `RunAll` message is therefore at most five check messages plus its header.
 - `CheckResult.Files` is not truncated; it holds the raw paths for programmatic use.
 
@@ -375,7 +375,9 @@ Not included in the commands above because the path contains characters that are
 
 - The library never executes anything a repository asks for: no hooks, no filter drivers (clean/smudge/process commands from `.gitattributes` and config), no fsmonitor, and no other external commands. LibGit2Sharp does not run hooks or external filter drivers, and the library registers no filters of its own.
 - The library does not change libgit2's global settings. In particular, it leaves repository owner validation (`safe.directory`) switched on.
-- Opening a hostile repository still runs native libgit2 parsing code. Keep LibGit2Sharp on its latest release and watch libgit2 security advisories.
+- libgit2's settings belong to the whole process, so the two rules above hold only while the calling process leaves them alone: a filter its own code registered through LibGit2Sharp (`GlobalSettings.RegisterFilter`) runs during the checks, as during any libgit2 read, and owner validation it switched off stays off.
+- Who can bring what: a clone brings only the files of its commits, so a hostile file name is all it can carry, and the message rules handle names. Its `.git` folder (config, hooks, alternates) is written on this machine. A repository folder copied in whole, such as an unpacked archive, a shared folder, or a Docker volume, brings its own `.git` as well, and its config can name files elsewhere, even on a network share (`include.path`, `core.excludesFile`, `.git/objects/info/alternates`), which libgit2 reads; on Windows, opening a file on a share can log in to that server automatically and hand it the user's credentials to crack or relay. The checks are meant for repositories cloned or created on this machine, and any other repository folder is untrusted input.
+- Opening a hostile repository still runs native libgit2 parsing code. libgit2 fixes arrive with LibGit2Sharp releases, through Dependabot (see [Supply chain](#supply-chain)).
 
 ### Information in messages
 
@@ -385,16 +387,17 @@ Messages usually end up in test output and CI logs, so they reveal file names, w
 
 `TempRepo` keeps its repository in a `TemporaryDirectory` (Meziantou.Framework.TemporaryDirectory), a uniquely named folder under the system temp directory that is deleted on dispose. Its delete clears read-only flags (libgit2 writes read-only files under `.git/objects`), retries a locked file, and removes a junction or symlink as a link without following it, so nothing outside the folder is touched. `TempRepo` releases the repository handle before the folder is deleted.
 
-### Supply chain (later)
+### Supply chain
 
-- Pin package versions (central package management with lock files) and keep GitHub Actions pinned to commit SHAs.
-- Enable Dependabot for NuGet packages and GitHub Actions.
+- Every GitHub Action is pinned to a full commit SHA, with its exact release in a comment: `uses: actions/checkout@<40 hex digits> # v7.0.1`. A tag can be moved by whoever controls the action's repository, and every run then executes the commit it points to; a commit SHA cannot be moved. A SHA is taken from the action's own repository, never from a fork. *(later)*
+- Dependabot keeps NuGet packages and GitHub Actions up to date (`.github/dependabot.yml`), with Dependabot alerts and security updates switched on. It is the whole policy for libgit2 as well: libgit2's own advisories are filed against the C library, not against the NuGet package, so neither Dependabot nor NuGetAudit flags them, and a libgit2 fix arrives when LibGit2Sharp ships a release with it, as an ordinary update. There is no separate watch of libgit2 advisories: this is a small tool, and it gets no more upkeep than it critically needs. *(later)*
+- Package versions are central (`Directory.Packages.props`), exact, and never floating. There are no NuGet lock files. A library's lock file does not reach the projects that use it. NuGet resolves the lowest applicable version, so exact versions already make a restore repeatable, and a version missing from the feed makes NuGet take a higher one with warning NU1603, which `TreatWarningsAsErrors` turns into an error. Lock files would also differ by configuration, because the analyzer packages are referenced under `Debug_Analyzers` only, and a locked restore breaks when the SDK rolls forward (`global.json`, `latestFeature`).
 - CI workflows run with read-only token permissions (`permissions: contents: read`). In place already: keep it in every new workflow.
-- When publishing to NuGet: sign the package and enable SourceLink.
+- Publishing to NuGet *(later)*: the package has SourceLink and no author signature. A code-signing certificate costs money every year, and most packages on nuget.org have none; nuget.org signs every package with its own repository signature, so what vouches for a version is who can push it. The publish job uses nuget.org Trusted Publishing: it exchanges GitHub's OIDC token (`permissions: id-token: write`) for a short-lived API key through the `NuGet/login` action, so no long-lived key is stored in the repository's secrets. Only that job gets `id-token: write`, and every action in its workflow is SHA-pinned.
 
 ## Implementation notes and catches
 
 - Always dispose `Repository` (wrap it in `using`). Leaked handles can lock files in .git on Windows. `GitAssert` opens one per check and disposes it before returning; it never keeps one in a field, because a shared handle disposed on one thread while another reads it is a native access violation that ends the test run.
 - Make sure the right native libgit2 binary is copied to the output on every build agent and platform.
 - Status can differ a little from `git status` because of autocrlf / line endings, file mode, and some gitignore edge cases; the script scenarios check the known ones against real Git (see [Test tooling](#test-tooling)). Turn on `RecurseUntrackedDirs` and keep `IncludeIgnored` off when checking untracked files.
-- LibGit2Sharp is maintained but releases slowly. Check its libgit2 version against security advisories when upgrading.
+- LibGit2Sharp is maintained but releases slowly, so a libgit2 fix can take weeks to reach this library. It arrives through Dependabot (see [Supply chain](#supply-chain)).

@@ -146,7 +146,9 @@ public sealed class CheckResultTests
         result.Files.ShouldBe(["a.txt"]);
     }
 
-    // Trigger: A check reports a path that holds a character other than an ASCII letter, a digit, ".", "_", "-", "/".
+    // Trigger: A check reports a shell-safe path that holds a character other than an ASCII letter, a digit, ".", "_",
+    //          "-", "/": a space, a "+", ",", "=" or "@", or a letter or digit of another script, a Japanese letter, a
+    //          letter outside the Basic Multilingual Plane (U+20000), an Arabic-Indic digit (U+0663).
     // Behavior: The command wraps that path in double quotes, where the character is literal in bash, PowerShell and
     //           cmd alike; a path of only those characters stays bare.
     // Assertion: The command line reads exactly as given in each row.
@@ -158,6 +160,9 @@ public sealed class CheckResultTests
     [InlineData("a,b.txt", "  git add -- \"a,b.txt\"")]
     [InlineData("key=value.txt", "  git add -- \"key=value.txt\"")]
     [InlineData("user@host.txt", "  git add -- \"user@host.txt\"")]
+    [InlineData("docs/日本語.md", "  git add -- \"docs/日本語.md\"")]
+    [InlineData("docs/\U00020000.md", "  git add -- \"docs/\U00020000.md\"")]
+    [InlineData("docs/٣.md", "  git add -- \"docs/٣.md\"")]
     public void Failing_PathInCommand_QuotedUnlessPlain(string path, string expectedCommandLine)
     {
         // Act

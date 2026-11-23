@@ -24,6 +24,8 @@ public sealed class CheckResult
     /// <summary>
     /// <c>&lt;Rule&gt;: OK.</c> when healthy. Otherwise the rule line, the offending entries (at most 20), and a
     /// <c>Fix:</c> command to run from the repository root. Fix commands are suggestions: read one before running it.
+    /// A path is printed escaped and, when long, shortened, and goes into a command only when it is shell-safe; a note
+    /// names the others. The message is at most 16,000 characters.
     /// </summary>
     public string Message { get; }
 

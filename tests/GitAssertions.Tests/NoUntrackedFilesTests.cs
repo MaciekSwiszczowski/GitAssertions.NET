@@ -176,4 +176,42 @@ public sealed class NoUntrackedFilesTests
         // Assert
         await CheckResultSnapshot.Verify(result);
     }
+
+    // Trigger: A cloned repository holds an untracked file named "$(rm -rf ~).txt", next to a plain tmp/notes.txt.
+    // Behavior: The check lists both files, but only the plain one goes into the fix commands, and a note names the
+    //           other to handle by hand, so pasting a command into a shell cannot run the name. (Windows can hold this
+    //           name; a newline in it, as in the spec's example, is covered by the message tests.)
+    // Assertion: The snapshot lists both in Files and in the entries, tmp/notes.txt alone in both commands, and
+    //            "$(rm -rf ~).txt" alone in the note.
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
+    public async Task NoUntrackedFiles_FileNamedAsShellCommandNextToPlainFile_LeavesItOutOfCommands()
+    {
+        // Arrange
+        using TempRepo repo = TempRepo.Create();
+        repo.AddFile("$(rm -rf ~).txt").AddFile("tmp/notes.txt");
+
+        // Act
+        CheckResult result = GitAssert.Open(repo.Root).NoUntrackedFiles();
+
+        // Assert
+        await CheckResultSnapshot.Verify(result);
+    }
+
+    // Trigger: A cloned repository holds one untracked file, named "$(rm -rf ~).txt", and nothing else is untracked.
+    // Behavior: No path is shell-safe, so no command line is printed: the entry, the sentence-only advice to ignore
+    //           the file, which holds no command, and the note.
+    // Assertion: The snapshot has no "Fix:" and no "git" line, and "$(rm -rf ~).txt" is in the entry and the note.
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
+    public async Task NoUntrackedFiles_OnlyFileNamedAsShellCommand_PrintsNoCommands()
+    {
+        // Arrange
+        using TempRepo repo = TempRepo.Create();
+        repo.AddFile("$(rm -rf ~).txt");
+
+        // Act
+        CheckResult result = GitAssert.Open(repo.Root).NoUntrackedFiles();
+
+        // Assert
+        await CheckResultSnapshot.Verify(result);
+    }
 }

@@ -1,0 +1,10 @@
+﻿Rule: NoUntrackedFiles
+IsHealthy: False
+Files (1):
+  $(rm -rf ~).txt
+Message:
+NoUntrackedFiles: 1 untracked file found.
+  $(rm -rf ~).txt
+Or ignore them: add the paths to .gitignore.
+Not included in the commands above because the path contains characters that are unsafe in a shell; handle it by hand:
+  $(rm -rf ~).txt
