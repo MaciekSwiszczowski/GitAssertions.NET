@@ -40,9 +40,14 @@ internal sealed class TempRepo : IDisposable
     /// Creates the folder, the repository and its initial commit. If a step throws, whatever was already made is
     /// released and deleted before the exception goes on, so a failed setup leaves nothing under the temp path.
     /// </summary>
-    public static TempRepo Create()
+    /// <param name="parentFolder">
+    /// An existing folder to make the repository's own folder in, for a test of a path the machine's temp folder does
+    /// not have, such as one with an apostrophe in it. The caller owns the parent: <see cref="Dispose"/> deletes only
+    /// the repository's folder. By default the machine's temp folder.
+    /// </param>
+    public static TempRepo Create(string? parentFolder = null)
     {
-        TempRepo repo = CreateUnborn();
+        TempRepo repo = CreateUnborn(parentFolder);
         try
         {
             return repo.AddFile(InitialFile, $"initial{Lf}").Stage(InitialFile).Commit("Initial commit");
@@ -59,9 +64,12 @@ internal sealed class TempRepo : IDisposable
     /// <see cref="MainBranch"/>, which does not exist until the first commit. If a step throws, whatever was already
     /// made is released and deleted before the exception goes on.
     /// </summary>
-    public static TempRepo CreateUnborn()
+    /// <param name="parentFolder">The folder to make the repository's own folder in; see <see cref="Create"/>.</param>
+    public static TempRepo CreateUnborn(string? parentFolder = null)
     {
-        TemporaryDirectory directory = TemporaryDirectory.Create();
+        TemporaryDirectory directory = parentFolder is null
+            ? TemporaryDirectory.Create()
+            : TemporaryDirectory.Create(FullPath.FromPath(parentFolder));
         Repository? repository = null;
         try
         {

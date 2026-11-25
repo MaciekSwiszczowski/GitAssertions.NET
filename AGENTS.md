@@ -178,7 +178,10 @@ Every test that runs a check ends in a `CheckResultSnapshot` call and asserts no
 - Verify is pinned exactly, `[32.0.0]`, the last free version: the next version is not free. Do not upgrade it
   without the user's decision on the fee (see `Directory.Packages.props`).
 
-Tests of `Open`, of exceptions, and of `CheckResult` itself stay value tests with Shouldly.
+Tests of `Open`, of exceptions, and of `CheckResult` itself stay value tests with Shouldly. So does a test that runs
+checks only to drive the library through a scenario and proves something else, such as that no hook or filter ran: it
+asserts only that, never the check's result (`HostileRepositoryTests`). A snapshot there would suggest the test is about
+the result, and would repeat the check tests that pin it.
 
 ## Make every lambda that can be static `static`
 

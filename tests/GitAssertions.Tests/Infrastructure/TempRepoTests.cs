@@ -1,5 +1,7 @@
 using LibGit2Sharp;
 
+using Meziantou.Framework;
+
 namespace GitAssertions.Tests.Infrastructure;
 
 /// <summary>
@@ -34,6 +36,32 @@ public sealed class TempRepoTests
 
         // Assert
         repo.Root.ShouldStartWith(Path.GetTempPath(), Case.Insensitive);
+    }
+
+    // Trigger: A test author needs a repository at a path the machine's temp folder does not give, such as one under a
+    //          folder with an apostrophe in its name, and creates the TempRepo inside a folder of their own.
+    // Behavior: The repository gets a folder of its own inside that parent, and disposing it deletes only that folder:
+    //           the parent belongs to the author.
+    // Assertion: The root starts with the parent's path and is longer, a repository is there, and after Dispose the
+    //            repository's folder is gone and the parent still exists.
+    [Fact(Timeout = TestTimeouts.DefaultMilliseconds)]
+    public void Create_ParentFolderGiven_RepositoryIsInsideItAndDisposeLeavesTheParent()
+    {
+        // Arrange
+        using TemporaryDirectory parent = TemporaryDirectory.Create();
+        string parentPath = parent.FullPath;
+
+        // Act
+        TempRepo repo = TempRepo.Create(parentPath);
+        string root = repo.Root;
+        bool wasRepository = Repository.IsValid(root);
+        repo.Dispose();
+
+        // Assert
+        root.ShouldStartWith(parentPath + Path.DirectorySeparatorChar, Case.Insensitive);
+        wasRepository.ShouldBeTrue();
+        Directory.Exists(root).ShouldBeFalse();
+        Directory.Exists(parentPath).ShouldBeTrue();
     }
 
     // Trigger: A test author creates two TempRepos in one test, for example to compare two repositories.

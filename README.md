@@ -54,6 +54,15 @@ A file recorded with `git add -N` (intent to add), which `git status` prints as 
 
 `NoConflicts` reads only what Git records: a conflict counts as resolved once `git add` has staged the file. It does not search files for conflict markers, so a file staged with `<<<<<<<` still in it passes. Markers left in code usually break the build, but not in a file nothing compiles or reads, such as Markdown.
 
+## Security
+
+A repository can be hostile: a folder copied in from elsewhere, an unpacked archive, a clone from a source you do not trust. The checks are meant for repositories cloned or created on this machine, and any other repository folder is untrusted input.
+
+- The library never runs hooks, filter drivers (clean, smudge, process), fsmonitor, or any other command a repository asks for, and it leaves libgit2's repository owner validation (`safe.directory`) switched on.
+- libgit2's settings belong to the whole process. A filter your own code registered through LibGit2Sharp (`GlobalSettings.RegisterFilter`) runs during the checks, and owner validation you switched off stays off.
+- `Open` refuses a repository whose own files name a network share, such as `\\server\share` or `//server/share` in `.git/config`, a file it includes, an alternates file, or a `.git` file, because opening one could send your credentials to that server. It throws an `ArgumentException` for `repoPath`, and there is no way to switch the refusal off. A symlink inside `.git`, such as a `.git/config` that links to a share, is not checked.
+- Opening a hostile repository still runs libgit2's native parsing code. Fixes for libgit2 arrive with LibGit2Sharp releases.
+
 ## Build
 
 Three configurations:
