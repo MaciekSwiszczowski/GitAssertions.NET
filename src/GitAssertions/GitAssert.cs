@@ -31,16 +31,9 @@ public sealed class GitAssert
     /// relative path is resolved against the current directory once, here, so a later change of the current directory
     /// cannot point a check at a different folder.
     /// </summary>
-    /// <remarks>
-    /// A repository folder is untrusted input unless it was cloned or created on this machine: a folder copied in
-    /// whole brings its own <c>.git</c>, whose config can name files on a network share, and opening a file on a share
-    /// can send the user's credentials to that server on Windows. So before libgit2 reads anything, <c>Open</c> reads
-    /// the files of the repository itself and refuses one that names a network path. There is no way to switch the
-    /// refusal off. A repository opened from a network path is not refused, because the caller chose that server.
-    /// </remarks>
     /// <exception cref="ArgumentException">
-    /// <paramref name="repoPath"/> is null or blank, is not the root folder of a Git repository, is a bare repository,
-    /// which has no working tree for the checks to read, or holds a repository whose own files name a network path.
+    /// <paramref name="repoPath"/> is null or blank, is not the root folder of a Git repository, or is a bare
+    /// repository, which has no working tree for the checks to read.
     /// </exception>
     /// <exception cref="InvalidOperationException">
     /// The repository cannot be read, for example because its configuration is broken.
@@ -49,16 +42,6 @@ public sealed class GitAssert
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(repoPath);
         string fullPath = Path.GetFullPath(repoPath);
-
-        // The first thing Open does with the repository, before Repository.IsValid, which already reads the config and
-        // would open any file it includes: libgit2 must never see a network path the repository names.
-        NetworkPathReference? network = NetworkPathGuard.FindFirst(
-            fullPath,
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
-        if (network is not null)
-        {
-            throw new ArgumentException(network.ToMessage(repoPath), nameof(repoPath));
-        }
 
         if (!WithoutLibGit2SharpExceptions(() => Repository.IsValid(fullPath)))
         {
