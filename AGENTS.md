@@ -180,8 +180,8 @@ Every test that runs a check ends in a `CheckResultSnapshot` call and asserts no
 
 Tests of `Open`, of exceptions, and of `CheckResult` itself stay value tests with Shouldly. So does a test that runs
 checks only to drive the library through a scenario and proves something else, such as that no hook or filter ran: it
-asserts only that, never the check's result (`HostileRepositoryTests`). A snapshot there would suggest the test is about
-the result, and would repeat the check tests that pin it.
+asserts only that, never the check's result (`RepositoryCommandsTests`). A snapshot there would suggest the test is
+about the result, and would repeat the check tests that pin it.
 
 ## Make every lambda that can be static `static`
 

@@ -12,10 +12,13 @@ namespace GitAssertions;
 /// sentence only when it is right for some entry; then, when a command left a path out, the note that names it. Lines
 /// are joined by <see cref="LineBreak.Lf"/>, with no line break at the end.
 /// <para>
-/// File names come from the repository, which may be hostile, so paths are the only untrusted input (spec, Security).
-/// A path goes into a command only when it is shell-safe, see <see cref="IsShellSafe"/>. Wherever a path is printed
-/// outside a command, it is shortened when it is long and its control and format characters are escaped, see
-/// <see cref="Display"/>. A message is cut at <see cref="MessageLimit"/> characters.
+/// Paths are the only untrusted input; the rest of a message is fixed text (spec, Security, Shell-safe paths). A person
+/// or an agent may paste a fix command into a shell, and file names can come from outside the repository's commits,
+/// such as a download, an unpacked archive, or generated output, so a path goes into a command only when it is
+/// shell-safe, see <see cref="IsShellSafe"/>. Even ordinary names hold spaces and non-ASCII letters, so a command
+/// quotes them, see <see cref="QuoteForCommand"/>. Wherever a path is printed outside a command, it is shortened when
+/// it is long and its control and format characters are escaped, see <see cref="Display"/>. A message is cut at
+/// <see cref="MessageLimit"/> characters.
 /// </para>
 /// </summary>
 internal static class FailureMessage

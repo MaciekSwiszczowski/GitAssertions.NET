@@ -8,14 +8,14 @@ namespace GitAssertions.Tests;
 
 /// <summary>
 /// Pins that the library never runs anything a repository asks for (docs/specification.md, Security, Untrusted
-/// repositories and libgit2). A <see cref="TempRepo"/> is armed with six traps (<see cref="HostileTraps"/>: two hooks,
+/// repositories and libgit2). A <see cref="TempRepo"/> is armed with six traps (<see cref="CommandTraps"/>: two hooks,
 /// a clean/smudge driver, a process driver, and an fsmonitor hook), each of which creates a marker file when it runs.
 /// The control tests prove that real git sets every trap off, because a trap built wrong never fires and the safety
 /// test would pass for nothing. The safety test then opens the same kind of repository with the library and runs every
 /// check, and finds no marker. These are value tests, not snapshots: the safety test runs the checks only to drive the
 /// library through a scenario, and asserts nothing about their results, which the check tests pin.
 /// </summary>
-public sealed class HostileRepositoryTests
+public sealed class RepositoryCommandsTests
 {
     private const string FolderWithApostrophe = "o'brien";
 
@@ -29,12 +29,12 @@ public sealed class HostileRepositoryTests
     {
         return new TheoryData<string, string>
         {
-            { HostileTraps.PreCommit, "commit --allow-empty -m trap" },
-            { HostileTraps.PostCheckout, "checkout -- " + HostileTraps.TrappedFile },
-            { HostileTraps.Clean, "status" },
-            { HostileTraps.Smudge, "checkout -- " + HostileTraps.TrappedFile },
-            { HostileTraps.Process, "status" },
-            { HostileTraps.FsMonitor, "-c core.fsmonitor=" + HostileTraps.FsMonitorHook + " status" },
+            { CommandTraps.PreCommit, "commit --allow-empty -m trap" },
+            { CommandTraps.PostCheckout, "checkout -- " + CommandTraps.TrappedFile },
+            { CommandTraps.Clean, "status" },
+            { CommandTraps.Smudge, "checkout -- " + CommandTraps.TrappedFile },
+            { CommandTraps.Process, "status" },
+            { CommandTraps.FsMonitor, "-c core.fsmonitor=" + CommandTraps.FsMonitorHook + " status" },
         };
     }
 
@@ -54,7 +54,7 @@ public sealed class HostileRepositoryTests
     {
         // Arrange
         using TempRepo repo = TempRepo.Create();
-        HostileTraps traps = await HostileTraps.ArmAsync(repo);
+        CommandTraps traps = await CommandTraps.ArmAsync(repo);
 
         // Act
         await GitCli.RunLineAsync(repo.Root, arguments);
@@ -78,7 +78,7 @@ public sealed class HostileRepositoryTests
         using TemporaryDirectory parent = TemporaryDirectory.Create();
         string folder = Directory.CreateDirectory(parent.GetFullPath(FolderWithApostrophe)).FullName;
         using TempRepo repo = TempRepo.Create(folder);
-        HostileTraps traps = await HostileTraps.ArmAsync(repo);
+        CommandTraps traps = await CommandTraps.ArmAsync(repo);
 
         // Act
         await GitCli.RunLineAsync(repo.Root, arguments);
@@ -99,7 +99,7 @@ public sealed class HostileRepositoryTests
     {
         // Arrange
         using TempRepo repo = TempRepo.Create();
-        HostileTraps traps = await HostileTraps.ArmAsync(repo);
+        CommandTraps traps = await CommandTraps.ArmAsync(repo);
 
         // Act
         GitAssert.Open(repo.Root).RunAll();

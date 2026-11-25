@@ -4,6 +4,53 @@
     <RootNamespace>GitAssertions</RootNamespace>
   </PropertyGroup>
 
+  <!--
+    The NuGet package (T8.2). The version is not here: it is given when packing, `-p:Version=0.3.0`, so no file holds a
+    release number. The target stays net11.0 (Directory.Build.props), so a project that installs the package targets
+    .NET 11 or later. The license is MIT, as in LICENSE, and the package carries no author signature (spec, Security >
+    Supply chain).
+  -->
+  <PropertyGroup>
+    <PackageId>GitAssertions</PackageId>
+    <Authors>Maciej Swiszczowski</Authors>
+    <Copyright>Copyright (c) 2026 Maciej Swiszczowski</Copyright>
+    <Description>xUnit-friendly checks that fail when an AI agent, or anyone, leaves a Git repository in a broken state: untracked files, unstaged changes, merge conflicts, an unfinished merge or rebase, or tracked files that should be ignored. Read-only, and every failure message lists the offending paths and a Fix command.</Description>
+    <PackageTags>git;testing;assertions;xunit;repository;agents</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageProjectUrl>https://github.com/MaciekSwiszczowski/GitAssertions.NET</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/MaciekSwiszczowski/GitAssertions.NET</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+  <!--
+    The doc comments show in a consumer's IDE, so the XML documentation file is written and its warnings, a public
+    member with no comment (CS1591) or a comment that names something wrong (CS1573, CS1574), fail the build.
+  -->
+  <PropertyGroup>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <!--
+    SourceLink: the .NET SDK includes Microsoft.SourceLink.GitHub, which writes the commit and the repository into the
+    PDB, so a debugger steps into this library's source. The symbols go in a .snupkg beside the package, and the PDB
+    holds the sources of any file Git does not track. Paths in the PDB are mapped to /_/ when ContinuousIntegrationBuild
+    is on, so a package built on another machine is the same, byte for byte. Directory.Build.props turns it on for CI;
+    a Release build turns it on here too, so the package a person packs on their own machine, for a release, is as
+    reproducible as the one CI packs.
+  -->
+  <PropertyGroup>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <ContinuousIntegrationBuild Condition="'$(Configuration)' == 'Release'">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="LibGit2Sharp" />
   </ItemGroup>

@@ -7,20 +7,41 @@ A small .NET library of xUnit-friendly checks that fail when an AI agent (or any
 - Every failure message lists the offending paths and gives a ready-to-paste `Fix:` command. Deleting untracked files and discarding edits cannot be undone, so the message says so in words and gives no command for them.
 - Git access is powered internally by LibGit2Sharp; the public API exposes only the library's own types.
 
-See [docs/specification.md](docs/specification.md) for the design and [docs/tasks.md](docs/tasks.md) for the task list.
+See [docs/specification.md](https://github.com/MaciekSwiszczowski/GitAssertions.NET/blob/main/docs/specification.md) for the design and [docs/tasks.md](https://github.com/MaciekSwiszczowski/GitAssertions.NET/blob/main/docs/tasks.md) for the task list.
+
+## Install
+
+The package is `GitAssertions`. It targets .NET 11, so a project that installs it targets .NET 11 or later. It is not on nuget.org yet (see Status), so install it from the folder that holds the `.nupkg`:
+
+```
+dotnet add package GitAssertions --source <folder>
+```
+
+The package depends on [LibGit2Sharp](https://www.nuget.org/packages/LibGit2Sharp) 0.32.0 or later, which brings the native libgit2 library for Windows, Linux, and macOS. If your own code uses LibGit2Sharp too, your project gets one LibGit2Sharp version, shared with this package, and with it one native libgit2 library, whose file name is fixed for each LibGit2Sharp version.
 
 ## Usage
 
+A test in your own repository that fails when an agent leaves it in a broken state, here with xUnit:
+
 ```csharp
 using GitAssertions;
+using Xunit;
 
-GitAssert git = GitAssert.Open(repoPath);   // the folder that contains .git
+public class RepositoryTests
+{
+    [Fact]
+    public void Repository_IsHealthy()
+    {
+        string repoPath = "path/to/your/repository";   // the folder that contains .git
+        GitAssert git = GitAssert.Open(repoPath);
 
-CheckResult result = git.NoUntrackedFiles();
-Assert.True(result.IsHealthy, result.Message);
+        CheckResult result = git.NoUntrackedFiles();
+        Assert.True(result.IsHealthy, result.Message);
 
-RunAllResult all = git.RunAll();            // every check below, in one call
-Assert.True(all.IsHealthy, all.Message);
+        RunAllResult all = git.RunAll();            // every check below, in one call
+        Assert.True(all.IsHealthy, all.Message);
+    }
+}
 ```
 
 `GitAssert` keeps only the path, so there is nothing to dispose, and one instance can be shared between tests. Each check opens the repository, reads it, and closes it before it returns.
@@ -56,11 +77,12 @@ A file recorded with `git add -N` (intent to add), which `git status` prints as 
 
 ## Security
 
-The library trusts the repository it checks as much as building it does: the checks are meant to run in the test suite of the repository they check, so that repository is built first, and the build runs its code with your rights. A repository from somewhere untrusted is unsafe to build or to run git in, and pointing `Open` at one trusts it the same way: the library adds no defense of its own. File names stay untrusted input: they can come from outside the repository's commits, such as an untracked download or an unpacked archive, and fix lines are run in a shell, so a `Fix:` command takes only shell-safe names.
+The library trusts the repository it checks as much as building it does: the checks are meant to run in the test suite of the repository they check, so that repository is built first, and the build runs its code with your rights. A repository from somewhere untrusted is unsafe to build or to run git in, and pointing `Open` at one trusts it the same way: the library adds no defense of its own.
+
+File names stay untrusted input, because they can come from outside the repository's commits, such as an untracked download or an unpacked archive, and fix lines are run in a shell. So a `Fix:` command takes only shell-safe names: letters, digits, spaces, and `. _ - / + , = @`. A name with anything else, such as `$(...)`, a quote, `;`, or `*`, is listed but left out of every command, and a note after the commands names it to handle by hand. A control or format character in a name, such as a newline or ESC, is printed as an escape (`\n`, `\u{001B}`), so an entry stays on one line. A path longer than 200 characters is shortened in the message and left out of commands, and a message is cut at 16,000 characters. `CheckResult.Files` always holds the raw, whole paths. Fix commands are still suggestions: read one before you run it.
 
 - The library never runs hooks, filter drivers (clean, smudge, process), fsmonitor, or any other command a repository asks for, and it leaves libgit2's repository owner validation (`safe.directory`) switched on.
 - libgit2's settings belong to the whole process. A filter your own code registered through LibGit2Sharp (`GlobalSettings.RegisterFilter`) runs during the checks, and owner validation you switched off stays off.
-- Opening a hostile repository still runs libgit2's native parsing code. Fixes for libgit2 arrive with LibGit2Sharp releases.
 
 ## Build
 
@@ -75,6 +97,8 @@ dotnet build -c Debug_Analyzers
 dotnet test
 ```
 
+The package is made with `dotnet pack src/GitAssertions -c Release -p:Version=0.3.0 -o <folder>`: the version is given when packing, so no file holds a release number. It holds the library, its XML documentation, and this README, and a `.snupkg` beside it holds the symbols, with SourceLink. A Release build maps source paths to `/_/`, so packing the same commit twice gives the same bytes. CI packs on every run, so a change that breaks packing fails before a release needs it.
+
 The check tests are [Verify](https://github.com/VerifyTests/Verify) snapshot tests: each one's whole `CheckResult` sits in a `.verified.txt` file beside its test class, and every healthy scenario of a check shares one, `<Check>.IsHealthy.verified.txt`. A failing test writes a `.received.txt` next to it. Read the difference, and copy it over the verified file only when the change is intended. Verify is pinned exactly to 32.0.0, its last free version; see `Directory.Packages.props`.
 
 Integration tests run the real `git` CLI to set up what libgit2 cannot (`TempRepo.GitAsync`), cut off from your Git config like the rest. They are tagged `Category=Integration`, run with every other test, and need git 2.32 or later on `PATH`: a missing or older git fails them, with a message that says to install or update it, and never skips them.
@@ -85,8 +109,6 @@ Two test projects: `GitAssertions.Tests` builds throwaway repositories and cuts 
 
 Early development. Not yet published to NuGet.
 
-File names come from the repository, which may be hostile, so a `Fix:` command takes only shell-safe names: letters, digits, spaces, and `. _ - / + , = @`. A name with anything else, such as `$(...)`, a quote, `;`, or `*`, is listed but left out of every command, and a note after the commands names it to handle by hand. A control or format character in a name, such as a newline or ESC, is printed as an escape (`\n`, `\u{001B}`), so an entry stays on one line. A path longer than 200 characters is shortened in the message and left out of commands, and a message is cut at 16,000 characters. `CheckResult.Files` always holds the raw, whole paths. Fix commands are still suggestions: read one before you run it.
-
 ## License
 
-[MIT](LICENSE)
+[MIT](https://github.com/MaciekSwiszczowski/GitAssertions.NET/blob/main/LICENSE)

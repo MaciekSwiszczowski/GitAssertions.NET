@@ -1,7 +1,7 @@
 namespace GitAssertions.Tests.Infrastructure;
 
 /// <summary>
-/// Six traps in a <see cref="TempRepo"/>, the things a hostile repository can ask git to run: two hooks, a clean/smudge
+/// Six traps in a <see cref="TempRepo"/>, the things a repository can ask git to run: two hooks, a clean/smudge
 /// filter driver, a process filter driver, and an fsmonitor hook (docs/tasks.md, T2.4). Each trap, when it runs,
 /// creates a marker file named after itself in <see cref="MarkerFolder"/>, so a test reads which traps ran from the
 /// folder. The marker folder is under <c>.git</c>, never in the working tree, so a marker cannot show up as an
@@ -19,7 +19,7 @@ namespace GitAssertions.Tests.Infrastructure;
 /// another working directory still writes where the test looks, and <c>sh</c> on Windows reads <c>C:/...</c>.
 /// </para>
 /// </remarks>
-internal sealed class HostileTraps
+internal sealed class CommandTraps
 {
     public const string PreCommit = "pre-commit";
 
@@ -60,7 +60,7 @@ internal sealed class HostileTraps
 
     private const string EditedContent = $"two{Lf}";
 
-    private HostileTraps(string markerFolder)
+    private CommandTraps(string markerFolder)
     {
         MarkerFolder = markerFolder;
     }
@@ -74,7 +74,7 @@ internal sealed class HostileTraps
     /// written, then both files are edited, so their stat no longer matches the index and git must read them through
     /// their drivers.
     /// </summary>
-    public static async Task<HostileTraps> ArmAsync(TempRepo repo)
+    public static async Task<CommandTraps> ArmAsync(TempRepo repo)
     {
         CancellationToken cancellation = TestContext.Current.CancellationToken;
 
@@ -87,7 +87,7 @@ internal sealed class HostileTraps
         string gitFolder = Path.Combine(repo.Root, ".git");
         string markerFolder = Path.Combine(gitFolder, "trap-markers");
         Directory.CreateDirectory(markerFolder);
-        HostileTraps traps = new(markerFolder);
+        CommandTraps traps = new(markerFolder);
 
         Directory.CreateDirectory(Path.Combine(gitFolder, "hooks"));
         await traps.WriteScriptAsync(Path.Combine(gitFolder, "hooks", PreCommit), PreCommit, cancellation);

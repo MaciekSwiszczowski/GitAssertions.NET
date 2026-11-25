@@ -1,7 +1,7 @@
 namespace GitAssertions.Tests;
 
 /// <summary>
-/// Pins what the message builder does with a hostile file name and with a huge message (docs/specification.md,
+/// Pins what the message builder does with an unsafe file name and with a huge message (docs/specification.md,
 /// Security, Shell-safe paths and Output limits), for every check alike: a name with a shell character stays out of
 /// every command and is named in the note; a control or format character prints escaped, so an entry stays on one
 /// line; a long path is shortened; a message past 16,000 characters is cut at a full line. No repository is read:
@@ -16,7 +16,7 @@ public sealed class FailureMessageSafetyTests
     private const string Summary = "Some paths found.";
 
     /// <summary>
-    /// A shell-safe path that sorts after every hostile path of these tests, so it is the last entry and the last
+    /// A shell-safe path that sorts after every unsafe path of these tests, so it is the last entry and the last
     /// path of a command.
     /// </summary>
     private const string PlainPath = "z-safe.txt";
@@ -289,8 +289,8 @@ public sealed class FailureMessageSafetyTests
             $"  git add -- {path} {PlainPath}");
     }
 
-    // Trigger: A check reports eleven hostile paths whose entries print as 1,595 characters each, ten of them as
-    //          long as an entry gets, and the message comes to exactly 16,000 characters.
+    // Trigger: A check reports eleven paths: ten unsafe ones whose entries print as 1,595 characters each, as long as
+    //          an entry gets, and a plain one, and the message comes to exactly 16,000 characters.
     // Behavior: The message is within the limit, so nothing is cut and no marker is added.
     // Assertion: The message is 16,000 characters long, holds all eleven entries, and does not end in the marker.
     [Fact]

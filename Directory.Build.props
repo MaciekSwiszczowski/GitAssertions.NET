@@ -57,15 +57,6 @@
     <IsTestTierProject Condition="$([System.String]::Copy('$(MSBuildProjectName)').EndsWith('.Tests'))">true</IsTestTierProject>
   </PropertyGroup>
 
-  <!--
-    IDE0005 (unused using) needs GenerateDocumentationFile, which is off for the library, so it is suppressed
-    there. The test tier turns the documentation file on and escalates IDE0005 to an error below, so the
-    suppression must not reach it - NoWarn beats WarningsAsErrors, and a rule named in both is silently off.
-  -->
-  <PropertyGroup Condition="'$(IsTestTierProject)' != 'true'">
-    <NoWarn>$(NoWarn);IDE0005</NoWarn>
-  </PropertyGroup>
-
   <PropertyGroup Condition="'$(Configuration)' == 'Debug_Analyzers'">
     <DebugSymbols>true</DebugSymbols>
     <Optimize>false</Optimize>
