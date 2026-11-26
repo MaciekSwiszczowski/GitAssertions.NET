@@ -386,7 +386,7 @@ The smallest step to a package the owner can try in his own projects: packed, ta
   - Spec, Supply chain: the `WorkflowPinTests` point says twice that a test fails on an unpinned `uses:` line; keep the first.
   - README: the paragraph on file names under Status joins Security, in place of its sentence on file names, without "which may be hostile"; delete the point on opening a hostile repository.
   - Proof: `git grep -n -i "may be hostile" -- README.md docs/specification.md src` finds nothing, and the analyzer build is clean, because a doc comment changed.
-- [ ] **T8.17 Release 0.3.0 to a local folder feed (after T8.2 and T8.16).** 0.3 is for private testing, so it goes to no public feed: nothing to unlist later, and no API key to keep. nuget.org waits for 1.0. The package ID `GitAssertions` was free on nuget.org on 2026-11-25.
+- [x] **T8.17 Release 0.3.0 to a local folder feed (after T8.2 and T8.16).** 0.3 is for private testing, so it goes to no public feed: nothing to unlist later, and no API key to keep. nuget.org waits for 1.0. The package ID `GitAssertions` was free on nuget.org on 2026-11-25.
   - Tag the release commit `v0.3.0`, and pack it: `dotnet pack src/GitAssertions -c Release -p:Version=0.3.0 -o <folder>`.
   - Each of the owner's projects that tests it commits the package in a folder of its own, such as `nuget-local/`, and names that folder in a `nuget.config` at its root, so its GitHub build restores it with no credentials, as a build on his machine does. Package source mapping takes `GitAssertions` from that folder only, so a package of the same name published on nuget.org later is never restored in its place:
 
@@ -407,7 +407,7 @@ The smallest step to a package the owner can try in his own projects: packed, ta
     </configuration>
     ```
 
-  - Not `packages/`: the .NET `.gitignore` template ignores `**/[Pp]ackages/*` and `*.nupkg`, so the package would need `git add -f`, and NoTrackedIgnoredFiles would then fail in that project. Its `.gitignore` gets `!nuget-local/*.nupkg` after the `*.nupkg` rule, and `git check-ignore -v` on the package prints nothing.
+  - Not `packages/`: the .NET `.gitignore` template ignores `**/[Pp]ackages/*` and `*.nupkg`, so the package would need `git add -f`, and NoTrackedIgnoredFiles would then fail in that project. Its `.gitignore` gets `!nuget-local/*.nupkg` after the `*.nupkg` rule, and `git check-ignore` on the package prints nothing and exits 1. Leave `-v` off: it prints the `!` rule that matches.
   - A version is packed once: NuGet keeps the first package of a version in its global cache on every machine, so a changed package under the same version is never seen. A fix ships as 0.3.1.
   - README, Status, and the spec's Scope, which says to use a project reference until NuGet packaging: 0.3 is a test package, kept in a local folder feed, not on nuget.org.
   - An infrastructure task. Proof: one of the owner's projects restores 0.3.0 from its folder, on his machine and on its GitHub build, and a test there passes `RunAll`.

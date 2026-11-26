@@ -17,6 +17,8 @@ The package is `GitAssertions`. It targets .NET 11, so a project that installs i
 dotnet add package GitAssertions --source <folder>
 ```
 
+A project whose GitHub build must restore it too commits the `.nupkg` in a folder of its own and names that folder in a `nuget.config`: see [Packaging](https://github.com/MaciekSwiszczowski/GitAssertions.NET/blob/main/docs/specification.md#packaging) in the spec.
+
 The package depends on [LibGit2Sharp](https://www.nuget.org/packages/LibGit2Sharp) 0.32.0 or later, which brings the native libgit2 library for Windows, Linux, and macOS. If your own code uses LibGit2Sharp too, your project gets one LibGit2Sharp version, shared with this package, and with it one native libgit2 library, whose file name is fixed for each LibGit2Sharp version.
 
 ## Usage
@@ -107,7 +109,7 @@ Two test projects: `GitAssertions.Tests` builds throwaway repositories and cuts 
 
 ## Status
 
-Early development. Not yet published to NuGet.
+Early development. Version 0.3 is a test package, kept in a local folder feed, not on nuget.org. nuget.org waits for 1.0.
 
 ## License
 

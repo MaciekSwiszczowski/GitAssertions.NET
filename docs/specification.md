@@ -8,7 +8,7 @@ The library is **read-only**. It inspects the repository and reports what it fin
 
 ## Scope
 
-Version 1 (v1) was a two-day build done with agents, released as 0.1; it is not 1.0, the first release on nuget.org. The phases after it in [tasks.md](tasks.md) add integration tests with real Git, accurate messages, security, a test package, the tasks before 1.0, and nice-to-have features, and tasks.md tracks which are done.
+Version 1 (v1) was a two-day build done with agents, released as 0.1; it is not 1.0, the first release on nuget.org. The phases after it in [tasks.md](tasks.md) add integration tests with real Git, accurate messages, security, a test package, the tasks before 1.0, and nice-to-have features, and tasks.md tracks which are done. Version 0.3, the release of the test package, is kept in a local folder feed, not on nuget.org (see [Packaging](#packaging)).
 
 - **Version 1:** NoUntrackedFiles, NoUnstagedChanges, NoConflicts, NoOperationInProgress, NoTrackedIgnoredFiles, and a plain RunAll with no options (no check can be turned off).
 - **Later:** a name of its own in NoOperationInProgress for the rarest operation left (`git am`), a `typechange` entry kind for NoUnstagedChanges (a tracked file replaced by another type, such as a symlink), NoMixedStaging (a narrower check than NoUnstagedChanges, which also reports a file changed again after it was staged; its own method, left out of the default `RunAll` so no file prints twice), NotDetachedHead, OnExpectedBranch, NoStaleIndexLock, configuration (enabling and disabling checks, allow-lists, expected branch), and publishing the package on nuget.org, which waits for 1.0 (see [Packaging](#packaging)).
@@ -45,7 +45,27 @@ The library is one NuGet package, `GitAssertions`, made from `src/GitAssertions/
 - **Documentation.** The XML documentation file is part of the package, so the doc comments show in a consumer's IDE. Warnings are errors, so a public member without a comment (CS1591) or a comment with a wrong `cref` (CS1574) fails the build.
 - **Symbols.** SourceLink, which the .NET SDK includes for GitHub repositories, writes the commit and the repository into the PDB. The symbols go in a `.snupkg` beside the package, and the PDB embeds the sources of files Git does not track. A Release build, and a CI build, map source paths to `/_/` (`ContinuousIntegrationBuild`), so packing the same commit twice gives the same bytes. The package has no author signature (see [Supply chain](#supply-chain)).
 - **CI.** The `pack` job of `ci.yml` runs `dotnet pack` on every run, in Release, with the placeholder version `0.0.0-ci`, and keeps nothing. Warnings are errors there too, so a bad metadata field fails it.
-- **Release.** Version 0.3 is for private testing and goes to a local folder feed, not to nuget.org. The package is on nuget.org from 1.0 (see [Supply chain](#supply-chain), Publishing to NuGet).
+- **Release.** Version 0.3 is for private testing, so it goes to no public feed: nothing to unlist later, and no API key to keep. The package is on nuget.org from 1.0 (see [Supply chain](#supply-chain), Publishing to NuGet). A release is the release commit tagged `v0.3.0` and packed from that commit, with `dotnet pack src/GitAssertions -c Release -p:Version=0.3.0 -o <folder>`. A version is packed once: NuGet keeps the first package of a version in its global cache on every machine, so a changed package under the same version is never seen, and a fix ships as 0.3.1.
+- **Consumers of the local package.** Each project that tests it commits the `.nupkg` (not the `.snupkg`) in a folder of its own, `nuget-local/`, and names that folder in a `nuget.config` at its root, so its GitHub build restores it with no credentials, as a build on a developer's machine does. Package source mapping takes `GitAssertions` from that folder only, so a package of the same name published on nuget.org later is never restored in its place:
+
+  ```xml
+  <configuration>
+    <packageSources>
+      <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+      <add key="local" value="nuget-local" />
+    </packageSources>
+    <packageSourceMapping>
+      <packageSource key="nuget.org">
+        <package pattern="*" />
+      </packageSource>
+      <packageSource key="local">
+        <package pattern="GitAssertions" />
+      </packageSource>
+    </packageSourceMapping>
+  </configuration>
+  ```
+
+  The folder is not `packages/`: the .NET `.gitignore` template ignores `**/[Pp]ackages/*` and `*.nupkg`, so a package there would need `git add -f`, and NoTrackedIgnoredFiles would then fail in that project. The project's `.gitignore` gets `!nuget-local/*.nupkg` after the `*.nupkg` rule instead, and `git check-ignore nuget-local/<package>.nupkg` prints nothing and exits 1. (With `-v` it prints the `!` rule that matches, so leave `-v` off.)
 
 ## Public API
 
