@@ -34,8 +34,8 @@
     <PackageVersion Include="YamlDotNet" Version="18.1.0" />
   </ItemGroup>
   <!--
-    Referenced only under the Debug_Analyzers configuration - see Directory.Build.props. Debug stays fast and
-    runs no analyzers at all.
+    Referenced only under the Debug_Analyzers and Release_Analyzers configurations - see Directory.Build.props.
+    Debug stays fast and runs no analyzers at all.
   -->
   <ItemGroup Label="Analyzers">
     <PackageVersion Include="Meziantou.Analyzer" Version="3.0.341" />

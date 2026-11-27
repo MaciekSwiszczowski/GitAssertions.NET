@@ -36,6 +36,11 @@ fast `Debug` build leaves off (`Directory.Build.props`, README, Build). Only the
 said so, not this pipeline, and on 2026-11-22 (T6.1) a task was reported done after `Debug` builds alone, with an
 unresolved `cref` in an XML comment (`CS1574`) that neither review caught. The user's own question found it.
 
+CI builds and tests in `Release_Analyzers` instead: the same analyzer set, on optimised code, as the package ships it
+(2026-11-27). Both share every analyzer setting (`AnalyzersBuild` in `Directory.Build.props`), so a clean
+`Debug_Analyzers` build stands for a clean `Release_Analyzers` one. When CI fails in a way a local run does not, build
+and test with `-c Release_Analyzers` before anything else.
+
 ```
 wsl -- bash -lc 'cd /mnt/c/_github/GitAssertions && mkdir -p TestResults/wsl && set -o pipefail && DiffEngine_Disabled=true dotnet test -c Debug --artifacts-path /tmp/GitAssertions-artifacts -- --timeout 5m 2>&1 | tee TestResults/wsl/wsl-$(date +%Y%m%d-%H%M%S).log'
 ```

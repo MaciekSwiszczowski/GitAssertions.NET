@@ -1,17 +1,22 @@
 <Project>
   <!--
-    Three configurations, and the difference between them is the point:
+    Four configurations, and the difference between them is the point:
 
-      Debug             as fast as possible. No analyzers, no NuGet audit. This is what you build while working.
-      Debug_Analyzers   the full analyzer set, warnings as errors. A task is not done until this builds clean.
-      Release           optimised output. Audit on, analyzers off.
+      Debug               as fast as possible. No analyzers, no NuGet audit. This is what you build while working.
+      Debug_Analyzers     the full analyzer set, warnings as errors. A task is not done until this builds clean.
+      Release             optimised output. Audit on, analyzers off. What a package is packed from.
+      Release_Analyzers   Release's optimised output with Debug_Analyzers' analyzer set. The CI gate, so the tests
+                          run against code compiled as the package ships it, and the analyzers run in the same build.
+
+    The two *_Analyzers configurations share every analyzer setting through AnalyzersBuild, so they cannot drift
+    apart: they differ only in optimisation and in the DEBUG constant.
   -->
   <PropertyGroup>
     <TargetFramework>net11.0</TargetFramework>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Configurations>Debug;Debug_Analyzers;Release</Configurations>
+    <Configurations>Debug;Debug_Analyzers;Release;Release_Analyzers</Configurations>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <EnableNETAnalyzers>false</EnableNETAnalyzers>
     <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
@@ -23,19 +28,23 @@
     <NuGetAuditMode>all</NuGetAuditMode>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug_Analyzers' or '$(Configuration)' == 'Release_Analyzers'">
+    <AnalyzersBuild>true</AnalyzersBuild>
+  </PropertyGroup>
+
   <!--
-    The analyzer packages below are referenced only under Debug_Analyzers, but project.assets.json is written once
-    per restore and is not per-configuration. Building Debug straight after Debug_Analyzers without a restore -
-    which is what an IDE does when it thinks packages are current - would therefore load those analyzers into the
-    Debug build, where TreatWarningsAsErrors turns every hit into an error. Skipping analyzer execution outside
-    Debug_Analyzers makes that leak harmless. Source generators are unaffected: this stops diagnostic analyzers
+    The analyzer packages below are referenced only under the *_Analyzers configurations, but project.assets.json is
+    written once per restore and is not per-configuration. Building Debug straight after Debug_Analyzers without a
+    restore - which is what an IDE does when it thinks packages are current - would therefore load those analyzers
+    into the Debug build, where TreatWarningsAsErrors turns every hit into an error. Skipping analyzer execution
+    outside them makes that leak harmless. Source generators are unaffected: this stops diagnostic analyzers
     only.
   -->
-  <PropertyGroup Condition="'$(Configuration)' != 'Debug_Analyzers'">
+  <PropertyGroup Condition="'$(AnalyzersBuild)' != 'true'">
     <RunAnalyzers>false</RunAnalyzers>
   </PropertyGroup>
 
-  <!-- Auditing is reserved for Release and Debug_Analyzers, to keep the Debug restore fast. -->
+  <!-- Auditing is reserved for every configuration but Debug, to keep the Debug restore fast. -->
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
     <NuGetAudit>false</NuGetAudit>
   </PropertyGroup>
@@ -63,7 +72,14 @@
     <DefineConstants>$(DefineConstants);DEBUG;TRACE;DEBUG_ANALYZERS</DefineConstants>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)' == 'Debug_Analyzers' and '$(IsTestTierProject)' == 'true'">
+  <!-- The SDK optimises only a configuration named Release, so Release_Analyzers asks for Release's settings itself. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release_Analyzers'">
+    <DebugSymbols>true</DebugSymbols>
+    <Optimize>true</Optimize>
+    <DefineConstants>$(DefineConstants);RELEASE;TRACE;RELEASE_ANALYZERS</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(AnalyzersBuild)' == 'true' and '$(IsTestTierProject)' == 'true'">
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <!-- CS1591: a public test method per xUnit convention has no doc comment and never will. -->
@@ -76,7 +92,7 @@
     </WarningsAsErrors>
   </PropertyGroup>
 
-  <ItemGroup Condition="'$(Configuration)' == 'Debug_Analyzers' and '$(IsTestTierProject)' == 'true'">
+  <ItemGroup Condition="'$(AnalyzersBuild)' == 'true' and '$(IsTestTierProject)' == 'true'">
     <PackageReference Include="Microsoft.VisualStudio.Threading.Analyzers" PrivateAssets="all" />
     <PackageReference Include="AsyncFixer" PrivateAssets="all" />
   </ItemGroup>
@@ -85,7 +101,7 @@
     The library is consumed by other people's test projects, which may run under a SynchronizationContext, so
     ConfigureAwait (CA2007) stays on here, unlike in a console app.
   -->
-  <PropertyGroup Condition="'$(Configuration)' == 'Debug_Analyzers' and '$(IsTestTierProject)' != 'true'">
+  <PropertyGroup Condition="'$(AnalyzersBuild)' == 'true' and '$(IsTestTierProject)' != 'true'">
     <AnalysisMode>Recommended</AnalysisMode>
     <AnalysisLevel>latest-recommended</AnalysisLevel>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
@@ -100,7 +116,7 @@
     </WarningsAsErrors>
   </PropertyGroup>
 
-  <ItemGroup Condition="'$(Configuration)' == 'Debug_Analyzers' and '$(IsTestTierProject)' != 'true'">
+  <ItemGroup Condition="'$(AnalyzersBuild)' == 'true' and '$(IsTestTierProject)' != 'true'">
     <PackageReference Include="Meziantou.Analyzer" PrivateAssets="all" />
     <PackageReference Include="Microsoft.VisualStudio.Threading.Analyzers" PrivateAssets="all" />
     <PackageReference Include="ErrorProne.NET.CoreAnalyzers" PrivateAssets="all" />

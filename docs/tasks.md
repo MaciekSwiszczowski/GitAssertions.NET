@@ -11,9 +11,9 @@ Releases: each release closes a phase, and the phases run in order.
 | 0.1 | Phase 4 | The five checks and RunAll, with every test run in parallel. |
 | 0.2 | Phase 6 | Integration tests with real Git, and accurate messages. |
 | 0.3 | Phase 8 | Security (Phase 7), and a test package for private testing, kept in a local folder feed. |
-| 1.0 | Phase 9 | The first release on nuget.org, for the owner's own use while the library matures. |
+| 1.0 | Phase 9 | The first release on nuget.org, while the library matures. |
 
-A security finding is sorted like any other task: realistic and needed before 1.0, into Phase 9; realistic but not urgent, into Phase 10. A critical finding, one that harms the owner's own use, such as lost work or a leaked secret or credential, goes into the current phase or Phase 9, as the owner decides. Out of scope since 2026-11-25: a hostile repository, one whose commits or `.git` folder were written to attack the library, because the library trusts the repository it checks as much as building it does (spec, Security); and new defenses against file names crafted to attack the library. File names can come from outside the commits, so a command takes only shell-safe names, and a path prints escaped and shortened; a gap found in those is fixed.
+A security finding is sorted like any other task: realistic and needed before 1.0, into Phase 9; realistic but not urgent, into Phase 10. A critical finding, one that harms a user of the library, such as lost work or a leaked secret or credential, goes into the current phase or Phase 9, as the owner decides. Out of scope since 2026-11-25: a hostile repository, one whose commits or `.git` folder were written to attack the library, because the library trusts the repository it checks as much as building it does (spec, Security); and new defenses against file names crafted to attack the library. File names can come from outside the commits, so a command takes only shell-safe names, and a path prints escaped and shortened; a gap found in those is fixed.
 
 Phase 10 holds nice-to-have features, picked up after Phase 9 when they're needed. Task IDs are never reused. A task moved to another phase gets the next number there, unless a commit names it, and its title names its former ID. Deleted on 2026-11-25, after a review that kept only realistic threats: T8.9, T8.13, T9.1 to T9.7, and T9.10, whose text git history keeps; Phase 9, Security Pass II, became the phase before 1.0.
 
@@ -356,7 +356,7 @@ Closed on 2026-11-24. Its open tasks moved on: T7.8 is T9.8, and T7.9 is T9.9; T
 
 ## Phase 8: Release 0.3, a test package
 
-The smallest step to a package the owner can try in his own projects: packed, tagged, and kept in a local folder feed, not on nuget.org. Every other task waits for Phase 9.
+The smallest step to a package a project can try: packed, tagged, and kept in a local folder feed, not on nuget.org. Every other task waits for Phase 9.
 
 - [x] **T8.1 Linux and macOS CI legs.** Run restore, build, and test on `ubuntu-latest` and `macos-latest` as well as `windows-latest`, as a job matrix with `fail-fast: false` (see the spec's Test tooling > Platforms). Fix or skip, with a stated reason, each test that depends on the behavior of one platform. Proof: a green CI run on all three.
   - The matrix is in `ci.yml`. All three legs are green on CI (2026-11-22).
@@ -388,7 +388,7 @@ The smallest step to a package the owner can try in his own projects: packed, ta
   - Proof: `git grep -n -i "may be hostile" -- README.md docs/specification.md src` finds nothing, and the analyzer build is clean, because a doc comment changed.
 - [x] **T8.17 Release 0.3.0 to a local folder feed (after T8.2 and T8.16).** 0.3 is for private testing, so it goes to no public feed: nothing to unlist later, and no API key to keep. nuget.org waits for 1.0. The package ID `GitAssertions` was free on nuget.org on 2026-11-25.
   - Tag the release commit `v0.3.0`, and pack it: `dotnet pack src/GitAssertions -c Release -p:Version=0.3.0 -o <folder>`.
-  - Each of the owner's projects that tests it commits the package in a folder of its own, such as `nuget-local/`, and names that folder in a `nuget.config` at its root, so its GitHub build restores it with no credentials, as a build on his machine does. Package source mapping takes `GitAssertions` from that folder only, so a package of the same name published on nuget.org later is never restored in its place:
+  - Each project that tests it commits the package in a folder of its own, such as `nuget-local/`, and names that folder in a `nuget.config` at its root, so its GitHub build restores it with no credentials, as a build on a developer's machine does. Package source mapping takes `GitAssertions` from that folder only, so a package of the same name published on nuget.org later is never restored in its place:
 
     ```xml
     <configuration>
@@ -410,7 +410,7 @@ The smallest step to a package the owner can try in his own projects: packed, ta
   - Not `packages/`: the .NET `.gitignore` template ignores `**/[Pp]ackages/*` and `*.nupkg`, so the package would need `git add -f`, and NoTrackedIgnoredFiles would then fail in that project. Its `.gitignore` gets `!nuget-local/*.nupkg` after the `*.nupkg` rule, and `git check-ignore` on the package prints nothing and exits 1. Leave `-v` off: it prints the `!` rule that matches.
   - A version is packed once: NuGet keeps the first package of a version in its global cache on every machine, so a changed package under the same version is never seen. A fix ships as 0.3.1.
   - README, Status, and the spec's Scope, which says to use a project reference until NuGet packaging: 0.3 is a test package, kept in a local folder feed, not on nuget.org.
-  - An infrastructure task. Proof: one of the owner's projects restores 0.3.0 from its folder, on his machine and on its GitHub build, and a test there passes `RunAll`.
+  - An infrastructure task. Proof: a project that tests it restores 0.3.0 from its folder, on a developer's machine and on its GitHub build, and a test there passes `RunAll`.
 
 ## Phase 9: Before 1.0
 

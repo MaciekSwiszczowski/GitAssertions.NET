@@ -11,8 +11,8 @@ updates:
     schedule:
       interval: "weekly"
     groups:
-      # The analyzer packages are referenced only under Debug_Analyzers (Directory.Build.props), and a new release
-      # often adds warnings that fail that build. One PR moves them together, so the new warnings are fixed once.
+      # The analyzer packages are referenced only under the *_Analyzers configurations (Directory.Build.props), and a
+      # new release often adds warnings that fail those builds. One PR moves them together, so the new warnings are fixed once.
       # A new analyzer package is added here and in Directory.Packages.props.
       analyzers:
         patterns:

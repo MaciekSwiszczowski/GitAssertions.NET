@@ -3,6 +3,7 @@
     <BuildType Name="Debug" />
     <BuildType Name="Debug_Analyzers" />
     <BuildType Name="Release" />
+    <BuildType Name="Release_Analyzers" />
     <Platform Name="Any CPU" />
   </Configurations>
   <Folder Name="/src/">

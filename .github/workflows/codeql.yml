@@ -1,0 +1,67 @@
+name: CodeQL
+
+# CodeQL code scanning (docs/specification.md, Security > Supply chain). The repository is public, so code scanning is
+# free. Findings go to the repository's Security tab as alerts: they do not fail the run. The analyzer build in ci.yml
+# is the gate; CodeQL looks for what it does not, data flow from input to a dangerous call across methods.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Weekly, so a new CodeQL query finds an old weakness even in a week with no push.
+    - cron: "27 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  analyze:
+    name: analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Uploads the results to code scanning: the one write permission in any workflow here, at job level only.
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # C# is built by the steps below, so CodeQL sees the same compilation as a real build.
+          - language: csharp
+            build-mode: manual
+          # The workflows themselves: script injection from an untrusted event field, and over-broad permissions.
+          - language: actions
+            build-mode: none
+    steps:
+      # Every action is pinned to a commit SHA, with its release in the comment (spec, Security > Supply chain).
+      # Dependabot moves the SHA and the comment together.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: github/codeql-action/init@915412ff23e8b7659517e607487dbeae018f2934 # v4.39.5
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          queries: security-extended
+
+      - if: matrix.build-mode == 'manual'
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+
+      # Debug runs no analyzers, so the build is quick; CodeQL needs the compilation, not the analyzers' verdict.
+      - if: matrix.build-mode == 'manual'
+        name: Build
+        run: dotnet build --configuration Debug
+
+      - uses: github/codeql-action/analyze@915412ff23e8b7659517e607487dbeae018f2934 # v4.39.5
+        with:
+          category: /language:${{ matrix.language }}

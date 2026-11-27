@@ -88,18 +88,19 @@ File names stay untrusted input, because they can come from outside the reposito
 
 ## Build
 
-Three configurations:
+Four configurations:
 
 - `Debug`: fast inner loop, no analyzers.
 - `Debug_Analyzers`: full analyzer set (NET analyzers, Meziantou, Roslynator, VS-Threading, ErrorProne, IDisposableAnalyzers, AsyncFixer), warnings as errors. Work is not done until this builds clean.
-- `Release`: optimised, analyzers off.
+- `Release`: optimised, analyzers off. The package is packed from it.
+- `Release_Analyzers`: optimised like `Release`, with the analyzer set of `Debug_Analyzers`. CI builds and tests in it, so the tests run against code compiled as the package ships it. To reproduce a CI failure locally, build and test with `-c Release_Analyzers`.
 
 ```
 dotnet build -c Debug_Analyzers
 dotnet test
 ```
 
-The package is made with `dotnet pack src/GitAssertions -c Release -p:Version=0.3.0 -o <folder>`: the version is given when packing, so no file holds a release number. It holds the library, its XML documentation, and this README, and a `.snupkg` beside it holds the symbols, with SourceLink. A Release build maps source paths to `/_/`, so packing the same commit twice gives the same bytes. CI packs on every run, so a change that breaks packing fails before a release needs it.
+The package is made with `dotnet pack src/GitAssertions -c Release -p:Version=0.3.0 -o <folder>`: the version is given when packing, so no file holds a release number. It holds the library, its XML documentation, and this README, and a `.snupkg` beside it holds the symbols, with SourceLink. A Release build maps source paths to `/_/`, so packing the same commit twice gives the same bytes. CI packs on every run, so a change that breaks packing fails before a release needs it. CodeQL scans the code and the workflows on every push, pull request, and weekly; its findings are alerts in the Security tab, not a failed build.
 
 The check tests are [Verify](https://github.com/VerifyTests/Verify) snapshot tests: each one's whole `CheckResult` sits in a `.verified.txt` file beside its test class, and every healthy scenario of a check shares one, `<Check>.IsHealthy.verified.txt`. A failing test writes a `.received.txt` next to it. Read the difference, and copy it over the verified file only when the change is intended. Verify is pinned exactly to 32.0.0, its last free version; see `Directory.Packages.props`.
 

@@ -16,8 +16,9 @@ concurrency:
 env:
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
-  # Debug_Analyzers is the gate: full analyzer set, warnings as errors, NuGet audit on.
-  CONFIGURATION: Debug_Analyzers
+  # Release_Analyzers is the gate: the full analyzer set, warnings as errors, NuGet audit on, and the tests run
+  # against optimised code, as the package ships it (Directory.Build.props).
+  CONFIGURATION: Release_Analyzers
 
 jobs:
   build-and-test:
@@ -37,7 +38,8 @@ jobs:
         with:
           global-json-file: global.json
 
-      # The analyzer packages are referenced only under Debug_Analyzers, so restore must see that configuration.
+      # The analyzer packages are referenced only under the *_Analyzers configurations, so restore must see the
+      # configuration.
       - name: Restore
         run: dotnet restore -p:Configuration=${{ env.CONFIGURATION }}
 

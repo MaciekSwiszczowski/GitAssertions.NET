@@ -392,6 +392,18 @@ dotnet_naming_style.s_camelcase.required_suffix =
 dotnet_naming_style.s_camelcase.word_separator = 
 dotnet_naming_style.s_camelcase.capitalization = camel_case
 
+# Disposal in the library. Every check opens a LibGit2Sharp Repository, and a leaked one keeps files under .git
+# locked on Windows (spec, Implementation notes). IDisposableAnalyzers is the main guard (IDISP001 and friends,
+# errors under the *_Analyzers configurations in Directory.Build.props). The .NET analyzers' own disposal rules are
+# off in the Recommended mode, so they are switched on here as a second, independent check: CA2000 (dispose a local
+# before it goes out of scope), CA2213 (a disposable field is disposed) and CA1816 (Dispose calls
+# GC.SuppressFinalize). They run only under the *_Analyzers configurations, where TreatWarningsAsErrors makes a hit
+# an error. The test tier runs no .NET analyzers (Directory.Build.props), so this section is for the library.
+[src/**.cs]
+dotnet_diagnostic.CA2000.severity = warning
+dotnet_diagnostic.CA2213.severity = warning
+dotnet_diagnostic.CA1816.severity = warning
+
 # Verify snapshot files: UTF-8 with a BOM, line feeds only, no final newline, and trailing whitespace is content.
 # The section header is spelled the way VerifyChecks.Run (VerifyConventionsTests) looks for it.
 # https://github.com/VerifyTests/Verify#text-file-settings
